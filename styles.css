@@ -1,0 +1,3429 @@
+/* Agnes AI Studio —— 简约风格，主色仅两种（交互色 + 语义状态色） */
+
+/* 撑满 view-content 且自身不滚动：滚动只发生在面板区，
+   头部 / Tab / 底部因此始终可见，长表单里的按钮不会被挤出视口 */
+.agg-view {
+	padding: 4px 2px 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* ---------- 头部状态条 ---------- */
+.agg-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.agg-head-title {
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: 0.2px;
+}
+
+.agg-badge {
+	font-size: 11px;
+	padding: 3px 10px;
+	border-radius: 999px;
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.agg-badge.is-on {
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
+}
+
+.agg-badge.is-off {
+	border-color: var(--text-warning);
+	color: var(--text-warning);
+}
+
+/* ---------- 面板顶部广告位（TopAdSlot） ----------
+   位置：head 与 tabBar 之间的一行。默认 mode:"off" 时整块 display:none，
+   不占任何视觉空间；上线时把 src/ad/top-ad-slot.ts 里 TOP_AD_SLOT_CONFIG.mode
+   改为 "text" 或 "image" 即可显示。
+   布局参考：
+   ┌──────────────────────────────────────────────────────┐
+   │  [图标/图片]  文案文字…                     [CTA] [×] │
+   └──────────────────────────────────────────────────────┘
+*/
+.agg-top-ad-slot-wrap {
+	/* 容器只负责垂直间距，让广告条与 head/tabBar 之间有清晰分割 */
+	padding-bottom: 6px;
+}
+
+.agnes-top-ad-slot {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 10px;
+	border-radius: 8px;
+	background: var(--background-secondary-alt);
+	border: 1px solid var(--background-modifier-border);
+	font-size: 12px;
+	color: var(--text-muted);
+	line-height: 1.4;
+	cursor: pointer;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.agnes-top-ad-slot:hover {
+	background: var(--background-secondary);
+	border-color: var(--interactive-accent);
+}
+
+/* 隐藏态：既不可见也不可点击，且完全脱离布局（height:0 才不占空间） */
+.agnes-top-ad-slot--hidden {
+	display: none !important;
+}
+
+/* 左侧媒体区（图标或图片） */
+.agnes-top-ad-slot__media {
+	flex-shrink: 0;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--interactive-accent);
+}
+
+.agnes-top-ad-slot__media svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* 图片形态：图片直接嵌在 media 容器里 */
+.agnes-top-ad-slot__img {
+	height: 32px;
+	width: auto;
+	max-width: 120px;
+	object-fit: contain;
+	border-radius: 4px;
+	vertical-align: middle;
+}
+
+/* 中间文案：ellipsis 兜底，窄侧栏也不溢出 */
+.agnes-top-ad-slot__text {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 右上角 CTA 按钮：小型高对比 */
+.agnes-top-ad-slot__cta {
+	flex-shrink: 0;
+	padding: 3px 10px;
+	font-size: 11px;
+	font-weight: 600;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.agnes-top-ad-slot__cta:hover {
+	background: var(--interactive-accent-hover);
+}
+
+/* 关闭按钮：低调，只在 hover 时更明显 */
+.agnes-top-ad-slot__close {
+	flex-shrink: 0;
+	padding: 0 6px;
+	font-size: 16px;
+	line-height: 1;
+	color: var(--text-faint);
+	background: none;
+	border: none;
+	cursor: pointer;
+	transition: color 0.15s ease;
+}
+
+.agnes-top-ad-slot__close:hover {
+	color: var(--text-normal);
+}
+
+/* ---------- Tab 栏 ---------- */
+/* 结构：.agg-tabs > button（按钮**直接**挂在 .agg-tabs 上，一条扁平列表）
+   2026-10-09 改版：原来是「固定两排、每排写死 5 个按钮」，12 个标签在窄侧栏
+   被等分压扁到出现「红果...」截断。现在交给 flex-wrap 按**标签宽度**自动换行：
+   宽侧栏并成一排，窄侧栏自然铺成两排或三排，永不溢出、永不截断。
+   显示哪些标签由设置页勾选（settings.visibleTabs）决定。
+   注意：按钮里只有一个标签文字节点，标签之间没有裸文本节点，所以 gap 能完整
+   控制间距 —— 之前误以为「按钮直挂会变成一列满宽横条」（v0.15.1 注释）是
+   当时 .agg-tab 还没有 flex 定宽造成的，现在 .agg-tab 自带定宽，不成立。 */
+.agg-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.agg-tab {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	/* 关键：不再 `flex: 1 1 0` 等分 —— 那会让每个按钮被拉到等宽然后各自截断。
+	   改成按内容宽度收缩，放不下才整颗按钮换行，标签文字保持完整。 */
+	flex: 0 1 auto;
+	min-width: 0;
+	padding: 6px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	cursor: pointer;
+	transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.agg-tab:hover {
+	color: var(--text-normal);
+	border-color: var(--interactive-accent);
+}
+
+.agg-tab.is-active {
+	color: var(--text-normal);
+	background: var(--background-secondary);
+	border-color: var(--interactive-accent);
+}
+
+.agg-tab.is-active .agg-tab-icon {
+	color: var(--interactive-accent);
+}
+
+.agg-tab-icon {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+/* 标签文字保持完整：按钮已经按内容宽度收缩，剩下的截断空间只用于极端窄侧栏兜底 */
+.agg-tab-label {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ---------- 面板 ---------- */
+/* 面板区是唯一滚动区：flex:1 吃满剩余高度，min-height:0 让 flex 子项能收缩，
+   overflow-y:auto 才是「封面页的生成按钮永远点得到」的关键 */
+.agg-panel {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	overflow-y: auto;
+	overflow-x: hidden;
+	overscroll-behavior: contain;
+	padding-right: 2px;
+}
+
+/* ---------- 文本面板 ---------- */
+.agg-text-head {
+	display: grid;
+	grid-template-columns: 1fr 1fr 130px;
+	gap: 10px;
+}
+
+.agg-text-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.agg-text-label {
+	font-size: 11px;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.agg-select,
+.agg-input,
+.agg-textarea {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 7px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 12.5px;
+	padding: 6px 10px;
+	font-family: inherit;
+	outline: none;
+}
+
+.agg-select:focus,
+.agg-input:focus,
+.agg-textarea:focus {
+	border-color: var(--interactive-accent);
+}
+
+.agg-textarea {
+	/* textarea 是收缩型行内块，不加 width 只会占默认 ~33 列宽（约 25 个字符），
+	   短英文提示词够用，中文长句就断成好几行、右边空一大片。撑满后与上方
+	   三列字段、下方按钮排同时贴齐右边缘。 */
+	width: 100%;
+	resize: vertical;
+	min-height: 120px;
+	line-height: 1.6;
+}
+
+.agg-text-bar {
+	display: flex;
+	gap: 8px;
+}
+
+.agg-text-out {
+	min-height: 40px;
+}
+
+.agg-text-out-edit {
+	width: 100%;
+	min-height: 120px;
+	resize: vertical;
+	font-family: inherit;
+	font-size: 13px;
+	line-height: 1.7;
+	padding: 14px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 7px;
+	background: var(--background-secondary);
+	color: var(--text-normal);
+}
+
+.agg-text-out-edit:focus {
+	border-color: var(--interactive-accent);
+	outline: none;
+}
+
+.agg-loading {
+	padding: 14px;
+	font-size: 12.5px;
+	color: var(--text-muted);
+	text-align: center;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 8px;
+}
+
+.agg-result {
+	white-space: pre-wrap;
+	word-break: break-word;
+	padding: 14px;
+	font-size: 13px;
+	line-height: 1.7;
+	background: var(--background-secondary);
+	border-radius: 10px;
+}
+
+.agg-error {
+	padding: 12px 14px;
+	font-size: 12.5px;
+	line-height: 1.5;
+	/* 实红底 + on-accent 字：--text-error 在明/暗主题下都是不透明饱和红，
+	   --text-on-accent 专为压在有色块上设计，两主题都保证可读。
+	   切勿再配 color: var(--text-error)：红字压同色红底，实测看不见。 */
+	color: var(--text-on-accent);
+	background: var(--text-error);
+	border-radius: 8px;
+}
+
+/* ---------- 空状态 ---------- */
+.agg-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 56px 20px;
+	text-align: center;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 12px;
+	cursor: pointer;
+}
+
+.agg-empty-icon {
+	font-size: 26px;
+	color: var(--text-muted);
+	opacity: 0.7;
+}
+
+.agg-empty-title {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.agg-empty-desc {
+	max-width: 340px;
+	font-size: 12.5px;
+	color: var(--text-muted);
+	line-height: 1.6;
+}
+
+.agg-empty-note {
+	margin-top: 6px;
+	font-size: 11px;
+	color: var(--text-muted);
+	opacity: 0.8;
+}
+
+/* ---------- 底部 ---------- */
+.agg-foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: auto;
+	padding-top: 8px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.agg-foot-hint {
+	font-size: 11.5px;
+	color: var(--text-muted);
+}
+
+/* ---------- 按钮 ---------- */
+.agg-btn {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 7px;
+	padding: 6px 14px;
+	font-size: 12.5px;
+	cursor: pointer;
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	transition: opacity 0.15s;
+}
+
+.agg-btn:hover:not(:disabled) {
+	border-color: var(--interactive-accent);
+}
+
+.agg-btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.agg-btn-primary {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.agg-btn-primary:hover:not(:disabled) {
+	opacity: 0.88;
+	border-color: var(--interactive-accent);
+}
+
+/* ---------- 设置页 ---------- */
+.agg-custom-model-form {
+	margin: 8px 0 12px;
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+/* ---------- 图片面板 ---------- */
+.agg-img-form {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.agg-prompt {
+	resize: vertical;
+	min-height: 72px;
+	font-family: inherit;
+	line-height: 1.6;
+}
+
+/* 视频面板的提示词框加高：rows=6（面板里设的）。
+   视频提示词要写运镜 / 光影 / 动作，0.75 倍行高下 6 行约 145px，
+   和图片面板的 150px 观感齐平，但比 3 行（~72px）多一倍可视区。 */
+.agg-vid-prompt {
+	min-height: 145px;
+}
+
+/* 图片面板的 prompt 框单独加高：图片提示词普遍比视频长（要写构图/材质/光影细节），
+   默认 72px 只够两三行。只影响图片面板，视频面板沿用 .agg-prompt 原高度。 */
+.agg-img-prompt {
+	min-height: 150px;
+}
+
+.agg-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+/* 三列行：模型 / 尺寸 / 数量。数量列略窄，避免它和模型名争抢宽度。 */
+.agg-row-3 {
+	grid-template-columns: 1fr 1fr 84px;
+}
+
+.agg-ref-row {
+	flex-direction: column;
+}
+
+.agg-ref-input {
+	resize: vertical;
+	min-height: 40px;
+	font-family: inherit;
+}
+
+/* ---------- 参考图选择区（Vault 选择 / 本地上传） ---------- */
+
+.agg-ref-area {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+/* 参考图左右分栏：左侧本地 / 右侧网络 */
+.agg-ref-split {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+
+.agg-ref-col {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.agg-ref-col-label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-muted);
+	padding-bottom: 2px;
+}
+
+.agg-ref-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.agg-ref-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 100%;
+	padding: 3px 6px 3px 10px;
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 999px;
+	font-size: 12px;
+	color: var(--text-normal);
+}
+
+.agg-ref-chip-name {
+	max-width: 260px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agg-ref-chip-del {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 14px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.agg-ref-chip-del:hover {
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+}
+
+/* 参考图 chip 缩略图 */
+.agg-ref-chip-thumb {
+	width: 56px;
+	height: 56px;
+	object-fit: cover;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	flex-shrink: 0;
+}
+
+/* URL 输入预览 */
+.agg-url-preview {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.agg-url-preview-item {
+	position: relative;
+	width: 56px;
+	height: 56px;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.agg-url-preview-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.agg-url-preview-status {
+	font-size: 10px;
+	color: var(--text-faint);
+	padding: 4px;
+	line-height: 1.3;
+}
+
+.agg-hint {
+	font-size: 11px;
+	color: var(--text-faint);
+	line-height: 1.5;
+}
+
+/* ---------- 参考板（多参考图合并） ---------- */
+
+.agg-ref-board-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--text-normal);
+}
+
+.agg-ref-board-preview {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 6px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+}
+
+.agg-ref-board-img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+/* ---------- 批量出图（数量 / 多行提示词） ---------- */
+
+/* 批量开关 + 预计张数提示：和参考板开关同属「高级开关」，视觉权重压低 */
+.agg-batch {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* 预计张数是花钱前的最后确认，比 hint 稍显眼一点 */
+.agg-batch-hint {
+	color: var(--text-muted);
+}
+
+/* 数量下拉：选项数固定 12，宽度压住不撑乱模型/尺寸那两列 */
+.agg-select.agg-count-select {
+	max-width: 84px;
+}
+
+.agg-batch-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+}
+
+.agg-batch-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+/* 一张图一行：缩略图在左，编号 + 状态在右，并发跑完原地回填 */
+.agg-batch-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 6px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+}
+
+/* 待出图时缩略图位置显示一个占位方块，行高才不会因 <img> 未加载而跳动 */
+.agg-batch-thumb {
+	flex: 0 0 auto;
+	width: 40px;
+	height: 40px;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-modifier-hover);
+	cursor: pointer;
+}
+
+.agg-batch-body {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.agg-batch-label {
+	font-size: 12px;
+	color: var(--text-normal);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agg-batch-status {
+	font-size: 11px;
+}
+
+.agg-batch-foot {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding-top: 4px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+
+/* 池模式参数说明：用左侧色条区分于普通提示，避免被当成背景噪音忽略 */
+.agg-pool-hint {
+	color: var(--text-muted);
+	border-left: 2px solid var(--interactive-accent);
+	padding: 4px 0 4px 8px;
+}
+
+/* 池协议不接受的控件（如宽高选择） */
+.agg-select.agg-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* 设置页的连通性检测结果 */
+.agg-pool-probe {
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	color: var(--text-muted);
+	white-space: pre-wrap;
+	margin: 4px 0 8px;
+}
+
+.agg-label {
+	font-size: 11px;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	margin-bottom: 2px;
+}
+
+.agg-btn-row {
+	display: flex;
+	gap: 8px;
+}
+
+.agg-output {
+	min-height: 20px;
+}
+
+.agg-img-result {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px;
+	background: var(--background-secondary);
+	border-radius: 10px;
+}
+
+.agg-img-preview {
+	display: flex;
+	justify-content: center;
+	overflow: hidden;
+	border-radius: 8px;
+	background: var(--background-primary);
+}
+
+.agg-img-full {
+	max-width: 100%;
+	max-height: 400px;
+	border-radius: 8px;
+}
+
+.agg-img-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+.agg-history {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.agg-section-title {
+	font-size: 11px;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	padding: 4px 0;
+}
+
+.agg-img-card {
+	position: relative;
+	cursor: pointer;
+	transition: opacity 0.15s;
+}
+
+.agg-img-card:hover {
+	opacity: 0.8;
+}
+
+.agg-img-thumb {
+	max-width: 100%;
+	max-height: 120px;
+	border-radius: 8px;
+		object-fit: contain;
+		background: var(--background-primary);
+	}
+
+/* 历史区：标题行（标题 + 清空按钮）+ 缩略图网格 */
+.agg-history-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.agg-btn-mini {
+	font-size: 11px;
+	line-height: 1.4;
+	padding: 2px 8px;
+	align-self: flex-end;
+}
+
+.agg-history-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 2px;
+}
+
+.agg-history-grid .agg-img-card {
+	width: 84px;
+}
+
+.agg-history-grid .agg-img-thumb {
+	max-height: 84px;
+	width: 84px;
+	height: 84px;
+	object-fit: cover;
+}
+
+/* 历史卡片右上角的删除按钮（清理废片）。默认不显示，hover 卡片才出现，
+   否则十几张缩略图上挂着十几个 ✕ 会淹没图片本身。 */
+.agg-img-del {
+	position: absolute;
+	top: 3px;
+	right: 3px;
+	z-index: 1;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: 11px;
+	line-height: 1;
+	display: none;
+	place-items: center;
+	cursor: pointer;
+}
+
+.agg-img-card:hover .agg-img-del {
+	display: grid;
+}
+
+.agg-img-del:hover {
+	background: var(--color-red);
+	color: var(--text-normal);
+}
+
+/* ---------- 视频面板 ---------- */
+.agg-vid-form {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+/* ---------- 任务中心 ---------- */
+.agg-task-center {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.agg-task-card {
+	padding: 10px 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary);
+}
+
+.agg-task-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+	font-size: 12px;
+}
+
+.agg-task-status {
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.agg-task-status.is-pending {
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+}
+
+.agg-task-status.is-running {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.agg-task-status.is-done {
+	background: var(--background-modifier-success);
+	color: var(--text-on-accent);
+}
+
+.agg-task-status.is-failed {
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+}
+
+.agg-task-status.is-cancelled {
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+}
+
+.agg-task-model {
+	font-size: 11.5px;
+	color: var(--text-muted);
+}
+
+.agg-task-time {
+	margin-left: auto;
+	font-size: 10.5px;
+	color: var(--text-muted);
+}
+
+/* 已用时长 / 百分比：等宽数字，秒级刷新时宽度不会左右抖 */
+.agg-task-elapsed {
+	margin-left: 10px;
+	font-size: 10.5px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 窄面板下的收缩策略：状态徽章 / 开始时间 / 已用时长都**不许**被压扁
+   （压扁后「已用」会被截成半句），该让位的是模型名 —— 时间信息比模型名有用 */
+.agg-task-status,
+.agg-task-time,
+.agg-task-elapsed {
+	flex: 0 0 auto;
+}
+
+.agg-task-model {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agg-progress {
+	height: 4px;
+	border-radius: 2px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.agg-progress-fill {
+	height: 100%;
+	width: var(--agg-progress, 0%);
+	background: var(--interactive-accent);
+	border-radius: 2px;
+	transition: width 0.3s;
+}
+
+/* 通用隐藏：用 class 而不是逐处写 inline style，便于主题与维护 */
+.agg-hidden {
+	display: none;
+}
+
+.agg-task-error {
+	font-size: 11.5px;
+	color: var(--text-error);
+	padding: 6px 0;
+}
+
+/* 过程提示：非致命，用警示色而不是错误红 —— 它出现时轮询仍在继续、任务会完成。
+   取不到 --text-warning 的主题退回 muted，绝不退回 error 色。 */
+.agg-task-hint {
+	font-size: 11.5px;
+	line-height: 1.45;
+	color: var(--text-warning, var(--text-muted));
+	padding: 6px 0;
+}
+
+.agg-task-output {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	font-size: 12px;
+	padding: 4px 0;
+}
+
+/* 文件名是时间戳 + 随机串，可能很长；必须能收缩，否则把缩略图挤变形 */
+.agg-task-file {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 终态卡片内联在文件行尾的「删除」：不许被长文件名挤压变形 */
+.agg-task-del-inline {
+	flex: 0 0 auto;
+}
+
+/* ---------- 产物缩略图（视频取第一帧） ---------- */
+
+.agg-task-thumb-wrap {
+	position: relative;
+	flex: 0 0 auto;
+	width: 46px;
+	height: 46px;
+	border-radius: 6px;
+	overflow: hidden;
+	background: var(--background-modifier-border);
+	cursor: pointer;
+}
+
+.agg-task-thumb {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* 播放角标用伪元素，不再插一个节点：缩略图本体仍是 <video> */
+.agg-task-thumb-wrap::after {
+	content: '▶';
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	color: #fff;
+	text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+	pointer-events: none;
+}
+
+.agg-task-output a {
+	color: var(--interactive-accent);
+	text-decoration: none;
+}
+
+.agg-task-output a:hover {
+	text-decoration: underline;
+}
+
+.agg-task-actions {
+	display: flex;
+	gap: 6px;
+	justify-content: flex-end;
+	margin-top: 6px;
+}
+
+.agg-btn-danger {
+	border-color: var(--text-error);
+	color: var(--text-error);
+}
+
+/* hover 必须连字色一起换：只换底会变成红底红字，与错误条同一个坑 */
+.agg-btn-danger:hover {
+	background: var(--text-error);
+	color: var(--text-on-accent);
+}
+
+.agg-empty-hint {
+	font-size: 12px;
+	color: var(--text-muted);
+	text-align: center;
+	padding: 16px;
+}
+
+/* ---------- 短剧流水线面板 ---------- */
+
+.agg-pipe-form {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.agg-pipe-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.agg-pipe-opts {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 8px 0;
+}
+
+.agg-pipe-check {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+/* 配置区「自动生成创意」这一行：复选框 + 「换一条」按钮并排 */
+.agg-pipe-autopremise {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+/* 小号按钮（换一条 / 各类操作按钮） */
+.agg-btn-sm {
+	padding: 3px 10px;
+	font-size: 11.5px;
+}
+
+.agg-pipe-status {
+	margin-top: 6px;
+}
+
+.agg-pipe-shots {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-top: 10px;
+}
+
+/* ⑦ 资产摘要行：图片 / 视频 / 成片（次要信息，别抢梗概的注意力） */
+.agg-pipe-cp-assets {
+	font-size: 11px;
+	color: var(--text-muted);
+}
+
+.agg-pipe-cp {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 8px 10px;
+	margin-bottom: 6px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+}
+
+.agg-pipe-cp-current {
+	border-color: var(--interactive-accent);
+}
+
+.agg-pipe-cp-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	font-size: 12px;
+}
+
+.agg-pipe-cp-stage {
+	flex-shrink: 0;
+}
+
+.agg-shot-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 12px;
+	background: var(--background-secondary);
+	border-radius: 10px;
+}
+
+.agg-shot-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	font-size: 12px;
+}
+
+.agg-shot-index {
+	font-weight: 600;
+	color: var(--text-accent);
+}
+
+.agg-shot-scene {
+	color: var(--text-normal);
+}
+
+.agg-shot-type,
+.agg-shot-dur {
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+}
+
+/* 分镜时长自动对齐台词：够用是弱提示，超上限是可操作告警 */
+.agg-shot-dur.is-fit {
+	background: var(--background-modifier-success, var(--background-modifier-hover));
+	color: var(--text-normal);
+}
+
+.agg-shot-dur.is-over {
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+	font-weight: 600;
+}
+
+.agg-shot-speech {
+	color: var(--text-muted);
+	font-size: 11px;
+	margin-left: 2px;
+}
+
+.agg-pipe-subtitle-style {
+	margin-top: 2px;
+}
+
+.agg-pipe-subtitle-style .agg-select {
+	width: 100%;
+}
+
+.agg-shot-body {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+}
+
+.agg-shot-media {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex: 0 0 auto;
+}
+
+.agg-shot-thumb {
+	width: 108px;
+	height: 108px;
+	object-fit: cover;
+	border-radius: 8px;
+	background: var(--background-modifier-hover);
+}
+
+.agg-shot-video {
+	width: 108px;
+	border-radius: 8px;
+	background: var(--background-modifier-hover);
+}
+
+.agg-shot-info {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+.agg-shot-prompt {
+	font-size: 12px;
+	line-height: 1.6;
+	color: var(--text-normal);
+	word-break: break-word;
+}
+
+.agg-shot-dialogue {
+	font-size: 12px;
+	line-height: 1.6;
+	color: var(--text-muted);
+	word-break: break-word;
+}
+
+/* ==================== 配音面板 ==================== */
+
+/* 同一行内并排的控件组（引擎专属参数） */
+.agg-inline {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+/* 数字输入框（单段字符上限） */
+.agg-num {
+	width: 80px;
+	flex: 0 0 auto;
+}
+
+/* 复选框标签 */
+.agg-check {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	color: var(--text-muted);
+	cursor: pointer;
+	user-select: none;
+}
+
+.agg-check input {
+	margin: 0;
+}
+
+/* 音频播放器：宽度撑满卡片 */
+.agg-audio {
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+/* 生成结果卡片 */
+.agg-result-card {
+	padding: 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
+}
+
+.agg-result-meta {
+	font-size: 12px;
+	color: var(--text-normal);
+	margin-bottom: 4px;
+}
+
+.agg-result-path {
+	font-size: 11px;
+	color: var(--text-faint);
+	word-break: break-all;
+	margin-bottom: 2px;
+}
+
+/* 会话历史卡片 */
+.agg-hist-card {
+	padding: 6px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	cursor: pointer;
+	margin-bottom: 4px;
+}
+
+.agg-hist-card:hover {
+	background: var(--background-modifier-hover);
+}
+
+.agg-hist-name {
+	font-size: 12px;
+	color: var(--text-normal);
+	word-break: break-all;
+}
+
+.agg-hist-meta {
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+/* ==================== 小说封面（阶段 C） ==================== */
+
+/* 实时排版预览：画布按目标像素绘制，用 CSS 缩放显示，保证所见即所得 */
+.agg-cover-preview {
+	display: flex;
+	justify-content: center;
+	margin: 4px 0;
+}
+
+.agg-cover-canvas {
+	width: 100%;
+	max-width: 280px;
+	height: auto;
+	display: block;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+}
+
+/* 书名缩放滑杆 */
+.agg-cover-range {
+	flex: 1;
+	min-width: 90px;
+}
+
+/* 结果三图并排：成品 / 无字底图 / 未裁切原图 */
+.agg-cover-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.agg-cover-thumb {
+	flex: 1 1 120px;
+	min-width: 0;
+}
+
+.agg-cover-thumb-img {
+	width: 100%;
+	height: auto;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	display: block;
+}
+
+.agg-cover-thumb-label {
+	font-size: 11px;
+	color: var(--text-faint);
+	text-align: center;
+	margin-top: 2px;
+}
+
+/* 提示词正文（可能很长，必须能滚） */
+.agg-cover-prompt {
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	line-height: 1.5;
+	color: var(--text-normal);
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 8px;
+	margin: 4px 0 8px;
+	max-height: 220px;
+	overflow: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.agg-cover-detail {
+	margin-top: 6px;
+}
+
+.agg-cover-detail > summary {
+	font-size: 11px;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+/* 历史卡片：缩略图 + 元信息两栏 */
+.agg-cover-hist-img {
+	width: 46px;
+	height: 61px;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	float: left;
+	margin-right: 8px;
+}
+
+.agg-cover-hist-meta {
+	overflow: hidden;
+}
+
+/* =============== 红果 Pro 面板（阶段 D1） =============== */
+
+/* 阶段进度条：七阶段横排，当前高亮 */
+.agg-pro-stages {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 8px 0;
+}
+
+.agg-pro-stage {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 8px;
+	border-radius: 12px;
+	font-size: 11px;
+	color: var(--text-muted);
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	white-space: nowrap;
+}
+
+.agg-pro-stage.is-todo {
+	opacity: 0.5;
+}
+
+.agg-pro-stage.is-done {
+	color: var(--text-normal);
+	background: var(--background-modifier-success-hover);
+	border-color: var(--interactive-success);
+}
+
+.agg-pro-stage.is-running {
+	color: var(--text-normal);
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.agg-pro-stage.is-confirmed {
+	color: var(--text-normal);
+	background: var(--background-modifier-success-hover);
+}
+
+.agg-pro-stage-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+/* 项目卡片 */
+.agg-pro-project {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	margin-bottom: 6px;
+	background: var(--background-primary);
+}
+
+.agg-pro-project.is-active {
+	border-color: var(--interactive-accent);
+	background: var(--background-secondary);
+}
+
+.agg-pro-project-title {
+	font-weight: 600;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agg-pro-project-status {
+	font-size: 11px;
+	color: var(--text-muted);
+}
+
+/* 双模式切换 */
+.agg-pro-modes {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.agg-pro-mode {
+	flex: 1;
+	padding: 6px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: 12px;
+	text-align: center;
+}
+
+.agg-pro-mode.is-active {
+	border-color: var(--interactive-accent);
+	color: var(--text-normal);
+	background: var(--background-secondary);
+}
+
+/* 定妆照网格 */
+.agg-pro-assets {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	gap: 8px;
+	margin: 8px 0;
+}
+
+.agg-pro-asset {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	overflow: hidden;
+	background: var(--background-primary);
+}
+
+.agg-pro-asset.is-failed {
+	border-color: var(--text-error);
+	opacity: 0.7;
+}
+
+.agg-pro-asset.is-pending {
+	opacity: 0.55;
+}
+
+.agg-pro-asset-img {
+	width: 100%;
+	aspect-ratio: 3 / 4;
+	object-fit: cover;
+	background: var(--background-modifier-border);
+	display: block;
+}
+
+.agg-pro-asset-meta {
+	padding: 4px 6px;
+	font-size: 11px;
+}
+
+.agg-pro-asset-name {
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agg-pro-asset-cat {
+	color: var(--text-muted);
+}
+
+/* 首尾帧预览 */
+.agg-pro-frames {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px;
+}
+
+.agg-pro-frame {
+	position: relative;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.agg-pro-frame-label {
+	position: absolute;
+	top: 4px;
+	left: 4px;
+	font-size: 10px;
+	padding: 1px 5px;
+	border-radius: 8px;
+	background: var(--background-modifier-success);
+	color: var(--text-on-accent);
+}
+
+/* 成片播放器 */
+.agg-pro-final-video {
+	width: 100%;
+	border-radius: 6px;
+	background: #000;
+	max-height: 420px;
+}
+
+/* 进度日志 */
+.agg-pro-log {
+	margin: 8px 0;
+	padding: 8px;
+	background: var(--background-modifier-border);
+	border-radius: 6px;
+	font-size: 11px;
+	max-height: 180px;
+	overflow: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.agg-pro-log-line {
+	margin-bottom: 2px;
+	color: var(--text-muted);
+}
+
+.agg-pro-log-line.is-ok {
+	color: var(--text-normal);
+}
+
+.agg-pro-log-line.is-error {
+	color: var(--text-error);
+}
+
+/* =============== 短剧 Pro：补齐状态样式与版式（此前 TS 里用了但 CSS 没写） =============== */
+
+/* 阶段条下方的状态行：与 .agg-hint 拉开层次，长文本也能正常折行 */
+.agg-pro-status {
+	margin: 6px 0 2px;
+}
+
+/* 提示 / 告警 / 错误：从裸文字升级为有色块，一眼能看出是哪种状态 */
+.agg-pro-warn {
+	padding: 6px 10px;
+	border-left: 3px solid var(--interactive-warning);
+	border-radius: 0 6px 6px 0;
+	background: var(--background-modifier-warning-hover);
+}
+
+.agg-pro-error {
+	padding: 6px 10px;
+	border-left: 3px solid var(--text-on-accent);
+	border-radius: 0 6px 6px 0;
+	background: var(--text-error);
+	color: var(--text-on-accent);
+	word-break: break-word;
+}
+
+/* 首尾帧：缺失态此前没有任何样式，看起来像空白卡 */
+.agg-pro-frame.is-missing {
+	border-style: dashed;
+	border-color: var(--background-modifier-border-hover);
+}
+
+.agg-pro-frame-empty {
+	min-height: 92px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 8px;
+	font-size: 11px;
+	color: var(--text-faint);
+	text-align: center;
+	background: var(--background-modifier-border);
+}
+
+/* 分镜视频卡：与成片同等观感，窄面板时也能完整显示控制条 */
+.agg-pro-shot-video {
+	width: 100%;
+	max-height: 260px;
+	border-radius: 6px;
+	background: #000;
+	display: block;
+}
+
+/* 镜卡失败态：边框点红，避免只能靠文字判断 */
+.agg-shot-card.is-failed {
+	border-color: var(--text-error);
+}
+
+/* 配音列表：clip 固定宽度，名字/时长另起一列，长路径不会挤成一团 */
+.agg-pro-audio {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-primary);
+}
+
+.agg-pro-audio-row {
+	display: grid;
+	grid-template-columns: minmax(220px, 1fr) auto;
+	gap: 10px;
+	align-items: center;
+}
+
+.agg-pro-audio-clip {
+	width: 100%;
+	min-width: 0;
+	height: 34px;
+}
+
+/* 窄面板（手机/分栏）：网格自动降到单列，不再溢出 */
+@media (max-width: 640px) {
+	.agg-pro-assets {
+		grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+		gap: 6px;
+	}
+
+	.agg-pro-frames {
+		grid-template-columns: 1fr;
+	}
+
+	.agg-pro-audio-row {
+		grid-template-columns: 1fr;
+	}
+
+	.agg-pro-stage {
+		font-size: 10px;
+		padding: 2px 6px;
+	}
+}
+
+/* 定妆照卡片：图与元信息之间有分隔，按钮贴底不压字 */
+.agg-pro-asset-meta {
+	padding: 5px 7px 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.agg-pro-asset .agg-btn {
+	margin: 0 7px 7px;
+}
+
+/* =============== 短剧面板：五大分区 =============== */
+
+/* 每个分区自带标题与上下间距，用一条分隔线把功能区切开 */
+.agg-pipe-sec {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px 0;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.agg-pipe-sec:first-child {
+	border-top: 0;
+	padding-top: 0;
+}
+
+/* ② 生成流程：阶段链路芯片 */
+.agg-pipe-stage-chip {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+.agg-pipe-stage {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 8px;
+	border-radius: 999px;
+	background: var(--background-modifier-hover);
+	white-space: nowrap;
+}
+
+/* 正在跑的阶段：实心底色最抢眼 */
+.agg-pipe-stage-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+/* 已完成的阶段：描边表示「走过去了」 */
+.agg-pipe-stage-done {
+	background: transparent;
+	border: 1px solid var(--interactive-accent);
+	color: var(--text-normal);
+}
+
+.agg-pipe-stage-arrow {
+	color: var(--text-faint);
+}
+
+/* ③ 剧本：可编辑正文 */
+.agg-pipe-script {
+	min-height: 170px;
+	resize: vertical;
+	font-size: 12px;
+	line-height: 1.7;
+}
+
+/* ④ 定妆：分组标题 + 资产卡片状态 */
+.agg-pipe-cast {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.agg-pipe-cast-group {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-accent);
+	margin-top: 2px;
+}
+
+.agg-pipe-asset-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+.agg-pipe-asset-desc,
+.agg-pipe-asset-prompt {
+	font-size: 11px;
+	line-height: 1.5;
+	min-height: 0;
+}
+
+.agg-pro-asset {
+	transition: border-color 0.15s;
+}
+
+/* 定妆资产生成态：跑着时高亮边框，失败时红框 */
+.agg-pipe-asset-running {
+	border-color: var(--interactive-accent);
+}
+
+.agg-pipe-asset-failed {
+	border-color: var(--text-error);
+}
+
+/* ⑤ 分镜：每镜四列（参考图 → 提示词 → 关键帧 → 视频） */
+.agg-shot-grid {
+	display: grid;
+	grid-template-columns: 112px minmax(150px, 1fr) 112px 128px;
+	gap: 10px;
+	align-items: start;
+}
+
+.agg-shot-col {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	min-width: 0;
+}
+
+.agg-shot-col-title {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+.agg-shot-col-sub {
+	margin-top: 2px;
+	color: var(--text-faint);
+}
+
+.agg-shot-col-media {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 112px;
+	height: 96px;
+	border-radius: 8px;
+	background: var(--background-modifier-hover);
+	overflow: hidden;
+}
+
+.agg-shot-col-media .agg-shot-thumb,
+.agg-shot-col-media .agg-shot-video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: 8px;
+}
+
+.agg-shot-empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 112px;
+	height: 96px;
+	border-radius: 8px;
+	background: var(--background-modifier-hover);
+	color: var(--text-faint);
+	font-size: 11px;
+}
+
+/* 「参考图」一列里每张图的来源标记：自动匹配 / 手动添加 */
+.agg-shot-ref-badge {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	padding: 0 4px;
+	border-radius: 0 4px 0 4px;
+	font-size: 9px;
+	line-height: 14px;
+	background: var(--background-modifier-hover);
+	color: var(--text-faint);
+	pointer-events: none;
+}
+
+/* 参考图一列的说明：告诉用户这些图是「按提示词自动匹配出来的」而不是凭空出现 */
+.agg-shot-ref-hint {
+	margin-bottom: 4px;
+	font-size: 10px;
+	line-height: 1.4;
+	color: var(--text-faint);
+}
+
+.agg-shot-add-ref {
+	width: 100%;
+	margin-top: 4px;
+	font-size: 11px;
+	color: var(--text-muted);
+}
+
+.agg-mini {
+	width: 100%;
+}
+
+/* 「开始生成」这类主行动按钮：加大加粗，一眼能找到 */
+.agg-btn-lg {
+	padding: 10px 22px;
+	font-size: var(--font-ui-medium, 15px);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+
+/* 定妆卡：图片按设定板画幅完整显示 + 文字区独立成块
+	设定板是横版多视图版面，原来一刀切成 3:4 会把三视图与表情格裁掉大半，
+	所以这里按类别给比例，且用 contain 保留整张版面（点开可放大看细节） */
+.agg-pipe-asset {
+	display: flex;
+	flex-direction: column;
+}
+
+.agg-cast-grid-leads,
+.agg-cast-grid-supports,
+.agg-cast-grid-scenes {
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.agg-cast-leads .agg-pro-asset-img,
+.agg-cast-supports .agg-pro-asset-img,
+.agg-cast-scenes .agg-pro-asset-img {
+	aspect-ratio: 16 / 9;
+	object-fit: contain;
+	background: var(--background-secondary);
+}
+
+.agg-cast-props .agg-pro-asset-img,
+.agg-cast-other .agg-pro-asset-img {
+	aspect-ratio: 1 / 1;
+	object-fit: contain;
+	background: var(--background-secondary);
+}
+
+.agg-cast-field-label {
+	margin-top: 4px;
+	font-size: 10px;
+	line-height: 1.4;
+	color: var(--text-faint);
+}
+
+.agg-pipe-asset-desc,
+.agg-pipe-asset-prompt {
+	width: 100%;
+	font-size: 11px;
+	/* card 是 overflow:hidden，给 textarea 开 resize 会露出被裁掉的手柄 */
+	resize: none;
+}
+
+/* 单张参考图 + 它的移除按钮 */
+.agg-shot-ref-item {
+	position: relative;
+	display: inline-block;
+}
+
+.agg-shot-ref-del {
+	position: absolute;
+	top: -6px;
+	right: -6px;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	line-height: 16px;
+	border-radius: 50%;
+	border: none;
+	cursor: pointer;
+	font-size: 12px;
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+}
+
+.agg-clickable {
+	cursor: zoom-in;
+}
+
+@media (max-width: 640px) {
+	.agg-shot-grid {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+/* =============== 媒体放大查看器 =============== */
+
+.agg-viewer {
+	height: min(86vh, 820px);
+	padding: 16px;
+	overflow: hidden;
+	background: rgba(0, 0, 0, 0.92);
+	cursor: zoom-out;
+}
+
+.agg-viewer-box {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+	height: 100%;
+}
+
+.agg-viewer-body {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+	touch-action: none;
+}
+
+.agg-viewer-img {
+	max-width: 94%;
+	max-height: 92%;
+	border-radius: 4px;
+	cursor: grab;
+	transform-origin: center center;
+	-webkit-user-drag: none;
+	user-select: none;
+}
+
+.agg-viewer-video {
+	max-width: 94%;
+	max-height: 92%;
+	border-radius: 8px;
+}
+
+.agg-viewer-caption {
+	flex: 0 0 auto;
+	text-align: center;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.85);
+	word-break: break-all;
+}
+
+.agg-viewer-grabbing {
+	cursor: grabbing;
+}
+
+
+/* =============== 运行日志面板 =============== */
+
+.agg-log-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.agg-log-tag-filter {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.agg-log-tag-select {
+	width: 170px;
+}
+
+/* 日志正文独立滚动：内容再多也只占这一块的高度 */
+.agg-log-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	max-height: 62vh;
+	overflow: auto;
+	padding: 8px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	line-height: 1.7;
+}
+
+.agg-log-line {
+	display: grid;
+	grid-template-columns: 78px 62px 1fr;
+	gap: 8px;
+	padding: 1px 4px;
+	border-radius: 3px;
+}
+
+/* 错误行自带实红底：hover 若换回灰底，白字落灰底在浅色主题下会再次看不清 */
+.agg-log-line:not(.agg-log-error):hover {
+	background: var(--background-modifier-hover);
+}
+
+.agg-log-time {
+	color: var(--text-faint);
+	white-space: nowrap;
+}
+
+.agg-log-tag {
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agg-log-text {
+	color: var(--text-muted);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.agg-log-ok .agg-log-text {
+	color: var(--text-normal);
+}
+
+.agg-log-ok .agg-log-time {
+	color: var(--text-success);
+}
+
+.agg-log-warn .agg-log-text {
+	color: var(--text-warning);
+}
+
+/* 错误行实红底 + 白字：原来红底配 --text-error 红字，字与底同色看不见 */
+.agg-log-error {
+	background: var(--text-error);
+}
+
+.agg-log-error .agg-log-text {
+	color: var(--text-on-accent);
+}
+
+/* 时间列/标签列原本是 text-faint/text-muted（灰），压在实红底上同样看不清（≈1.9:1），一并提亮 */
+.agg-log-error .agg-log-time,
+.agg-log-error .agg-log-tag {
+	color: var(--text-on-accent);
+}
+
+/* =============== 设置页分区（可折叠 + 状态总览） =============== */
+
+.agg-set-section {
+	margin-bottom: 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 10px;
+	background: var(--background-secondary);
+	overflow: hidden;
+}
+
+.agg-set-section > summary {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 14px;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--text-normal);
+	cursor: pointer;
+	user-select: none;
+	list-style: none;
+}
+
+.agg-set-section > summary::-webkit-details-marker {
+	display: none;
+}
+
+/* 折叠箭头：用伪元素，避免额外 DOM */
+.agg-set-section > summary::before {
+	content: '▸';
+	flex: 0 0 auto;
+	font-size: 10px;
+	color: var(--text-muted);
+	transition: transform 0.15s ease;
+}
+
+.agg-set-section[open] > summary::before {
+	transform: rotate(90deg);
+}
+
+.agg-set-section > summary:hover {
+	background: var(--background-modifier-hover);
+}
+
+.agg-set-section-desc {
+	margin-left: auto;
+	font-size: 11px;
+	font-weight: 400;
+	color: var(--text-muted);
+	text-align: right;
+}
+
+.agg-set-body {
+	padding: 2px 12px 12px;
+}
+
+/* 设置页里的分组小标题（如「单步生成 / 多阶段流水线 / 工具」），
+   用于把一串连续的 Setting 行按语义切开，比一行说明文字更醒目。 */
+.agg-set-subhead {
+	margin: 12px 0 2px;
+	padding-top: 8px;
+	border-top: 1px solid var(--background-modifier-border);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	color: var(--text-muted);
+}
+
+.agg-set-subhead:first-child {
+	margin-top: 4px;
+	padding-top: 0;
+	border-top: none;
+}
+
+/* 顶部状态总览：一眼看出「现在能不能跑」 */
+.agg-set-status {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 8px;
+	margin-bottom: 14px;
+}
+
+.agg-set-status-item {
+	padding: 8px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary);
+}
+
+.agg-set-status-label {
+	font-size: 10.5px;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.agg-set-status-value {
+	margin-top: 2px;
+	font-size: 12.5px;
+	color: var(--text-normal);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agg-set-status-value.is-ok {
+	color: var(--text-success);
+}
+
+.agg-set-status-value.is-warn {
+	color: var(--text-warning);
+}
+
+.agg-set-status-value.is-off {
+	color: var(--text-muted);
+}
+
+/* ==================== MTV 面板（阶段 D3） ==================== */
+
+.agg-mtv-btn-row {
+	display: flex;
+	gap: 8px;
+	margin: 10px 0 6px;
+}
+
+.agg-mtv-btn-row button {
+	flex: 0 0 auto;
+}
+
+.agg-mtv-result {
+	margin-top: 6px;
+}
+
+.agg-mtv-summary {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 12.5px;
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 7px;
+	padding: 8px 10px;
+	background: var(--background-secondary);
+}
+
+.agg-mtv-seg {
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+/* ---------- 解说片面板（doc/34 Explainer / Step 3）---------- */
+.agg-explain-head {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1.6fr;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.agg-explain-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.agg-explain-label {
+	font-size: 11px;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.agg-explain-topic {
+	/* textarea 是收缩型行内块，不加 width 只会占默认 ~33 列宽；撑满后按钮排也贴满右边缘 */
+	width: 100%;
+	/* rows=5（面板代码里设的）。这里给 min-height 兜底，避免 Obsidian 主题
+	   给 textarea 设了固定 line-height 时行高被压扁。 */
+	min-height: 120px;
+	resize: vertical;
+}
+
+/* 主题输入框上方的说明文字（小字灰色，别抢主题框的视觉重心） */
+.agg-explain-hint {
+	font-size: 11px;
+	color: var(--text-faint, var(--text-muted));
+	line-height: 1.5;
+	margin: -2px 0 4px;
+}
+
+/* 风格锚点 / 并发同一排：两列，各自「标签在上、下拉在下」，与其它字段同构。
+   原先 3 列 grid 把「标签」和「下拉」当成两个独立格子 → 标签掉进中列、
+   下拉掉进右列，视觉上完全错位（用户 2026-10-07 反馈）。 */
+.agg-explain-head.is-anchor {
+	grid-template-columns: 2fr 1fr;
+}
+
+/* BGM 底轨一行三格：勾选框 + 两个音量下拉。三格等宽，比首行更紧凑；
+   首列是 label + checkbox 竖排，和右侧两个下拉的「标签在上、控件在下」对齐。 */
+.agg-explain-head.is-bgm {
+	grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* 勾选框 + 「启用」文字横排显示在标签正下方（点文字也能切换，别让 checkbox 光秃秃语义不明） */
+.agg-explain-bgm-line {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.agg-explain-bgm-toggle input[type='checkbox'] {
+	width: 14px;
+	height: 14px;
+	margin: 0;
+	cursor: pointer;
+	flex: none;
+}
+
+/* 「启用」文字：弱化色调，不与左侧字段标签抢视觉 */
+.agg-explain-bgm-on {
+	cursor: pointer;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	user-select: none;
+}
+
+/* 「自定义」分支的锚点输入框容器（默认 display:none，由面板切换） */
+.agg-explain-anchor-custom {
+	margin: 4px 0 8px;
+}
+
+.agg-explain-bar {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 8px;
+}
+
+/* 顶部 runBtn 是"跑全程"入口，跟组内"重跑本步"是不同层级。
+	只调这个 bar 的 gap：主按钮 .agg-btn-lg 已经比旁边按钮宽/高，
+	再把它们之间的间距拉大到 14px，让 stopBtn/saveBtn 视觉上明确退到第二梯队。
+	组内的 .agg-explain-bar 保留 8px 不变——组内按钮语义一致，不加分隔。 */
+.agg-explain-bar:has(.agg-btn-lg) {
+	gap: 14px;
+}
+
+/* 主按钮在 light/dark 主题下都要有立体感，避免与旁边扁平按钮抢不出层级 */
+.agg-btn-primary.agg-btn-lg {
+	box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.agg-btn-primary.agg-btn-lg:hover:not(:disabled) {
+	box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* 键盘可达性：Tab 循环到按钮时必须有明确的视觉锚点。
+	Obsidian 默认 :focus 只在小尺寸按钮上有一圈 outline，agg-btn 里被覆盖掉了。
+	用 :focus-visible 而不是 :focus——鼠标点击不触发（避免点了按钮留一圈蓝框），
+	只有键盘 Tab 到才出现。 */
+.agg-btn:focus-visible {
+	outline: none;
+	box-shadow:
+		inset 0 0 0 2px var(--interactive-accent),
+		0 0 0 2px var(--background-primary);
+}
+
+/* 按钮内部的快捷键 chip：<kbd> 标签直接跟在 label 后面，
+	Ctrl+Enter / Esc 这些面板快捷键不再藏在 tooltip 里。
+	border-radius 999px 让它看起来像个标签而不是按钮的一部分 */
+.agg-btn-kbd {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 1px 5px;
+	font-size: 10.5px;
+	font-weight: 500;
+	line-height: 1.3;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.08);
+	border: 1px solid rgba(0, 0, 0, 0.12);
+	color: var(--text-muted);
+	font-family: inherit;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+/* 主按钮的 kbd chip 反色：蓝底白字按钮里，kbd 用半透明白底 + 白字，
+	视觉上跟标签连在一起但仍是可辨识的独立标记 */
+.agg-btn-primary .agg-btn-kbd {
+	background: rgba(255, 255, 255, 0.18);
+	border-color: rgba(255, 255, 255, 0.35);
+	color: var(--text-on-accent);
+}
+
+/* 顶部全局状态 chip：按钮禁用原因原本只有 tooltip，扫一眼看不见。
+	放在 bar 右边，把最关键的下一步行动做成常驻文本——用户扫过顶部就知道
+	"该做什么"，不用再 hover 每个按钮。默认隐藏，只有需要用户处理时才出现。 */
+.agg-explain-status-chip {
+	margin-left: auto;
+	padding: 2px 10px;
+	border-radius: 999px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	font-size: 11.5px;
+	color: var(--text-muted);
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.agg-explain-status-chip.is-hidden {
+	display: none;
+}
+
+.agg-explain-status-chip.is-warn {
+	background: var(--color-orange, #e5993e);
+	border-color: var(--color-orange, #e5993e);
+	color: #fff;
+}
+
+.agg-explain-status-chip.is-error {
+	background: var(--color-red, #e05350);
+	border-color: var(--color-red, #e05350);
+	color: #fff;
+}
+
+.agg-explain-out {
+	min-height: 40px;
+}
+
+.agg-explain-stats {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 6px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+.agg-explain-stat {
+	font-variant-numeric: tabular-nums;
+}
+
+/* 状态 chip：达标是弱提示，待修必须一眼可见 */
+.agg-chip {
+	padding: 1px 8px;
+	border-radius: 999px;
+	font-size: 11.5px;
+}
+
+.agg-chip.is-ok {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.agg-chip.is-warn {
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+	font-weight: 600;
+}
+
+.agg-explain-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.agg-explain-table th,
+.agg-explain-table td {
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding: 4px 6px;
+	text-align: left;
+	vertical-align: top;
+}
+
+.agg-explain-table th {
+	color: var(--text-muted);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.agg-explain-td {
+	font-variant-numeric: tabular-nums;
+	color: var(--text-normal);
+	white-space: nowrap;
+}
+
+.agg-explain-cue {
+	white-space: normal;
+	min-width: 140px;
+	line-height: 1.5;
+}
+
+/* 超 8 秒的镜头：红底必须配 --text-on-accent（红字压红底的根本性错误） */
+.agg-explain-td.is-over {
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+	font-weight: 600;
+}
+
+/* ===== Explainer 面板：素材阶段（doc/34 Step 4）===== */
+
+/* 出图模型 / 画面尺寸 / 音色 三列，与上面「时长 / 语言 / 模型」那行错开 */
+.agg-explain-head.is-rows {
+	grid-template-columns: repeat(3, 1fr);
+}
+
+.agg-explain-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-2, 6px);
+	margin-bottom: var(--size-4-3, 8px);
+}
+
+.agg-explain-log {
+	max-height: 220px;
+	overflow-y: auto;
+	font-size: var(--font-ui-smaller);
+	line-height: 1.6;
+}
+
+.agg-explain-line {
+	padding: 2px 0;
+	color: var(--text-muted);
+	word-break: break-all;
+}
+
+.agg-explain-line.is-warn {
+	/* 有色底 → 文字必须配 --text-on-accent，别拿红字压红底 */
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+	border-radius: var(--radius-s, 4px);
+	padding: 2px var(--size-4-2, 6px);
+}
+
+.agg-explain-line.is-error {
+	color: var(--text-error);
+}
+
+/* ===== Explainer 解说词时长诊断 =====
+   结论必须落在镜头表旁边：只写控制台日志用户看不见（日志被淹没、或根本没打开控制台），
+   「为什么短」不知道原因就改不了。 */
+.agg-explain-diagnosis {
+	margin: 6px 0;
+	padding: 6px var(--size-4-2, 6px);
+	border-radius: var(--radius-s, 4px);
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	font-size: 12px;
+	line-height: 1.6;
+	word-break: break-word;
+}
+
+.agg-explain-diagnosis.is-warn {
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+	border-color: transparent;
+}
+
+.agg-explain-diagnosis .diag-head {
+	font-weight: 600;
+}
+
+.agg-explain-diagnosis .diag-sub {
+	opacity: 0.85;
+}
+
+/* ===== Explainer 分镜产出（画面提示 + 运镜）=====
+   分镜的唯一产出就是画面提示，之前它只体现在上一个分组（解说词）的镜头表里，
+   用户点在分镜组里看，自然「没有输出」。 */
+.agg-explain-sb-list {
+	max-height: 220px;
+	overflow-y: auto;
+	margin-top: 6px;
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: 6px;
+}
+
+.agg-explain-sb-row {
+	padding: 3px 0;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.agg-explain-sb-idx {
+	color: var(--text-faint, var(--text-muted));
+	font-variant-numeric: tabular-nums;
+	margin-right: 6px;
+}
+
+.agg-explain-sb-motion {
+	display: block;
+	color: var(--text-faint, var(--text-muted));
+	font-size: 11px;
+	margin-top: 1px;
+}
+
+/* ===== Explainer 渲染前 QC 报告（只展示提示，不静默改稿） ===== */
+
+.agg-explain-qc {
+	margin-top: 6px;
+}
+
+.agg-explain-qc-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+
+.agg-explain-qc-count {
+	font-size: 11.5px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.agg-explain-qc-list {
+	list-style: none;
+	margin: 4px 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.agg-qc-item {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	font-size: 12px;
+	line-height: 1.5;
+	padding: 2px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.agg-qc-tag {
+	flex: 0 0 auto;
+	font-size: 10.5px;
+	font-weight: 600;
+	padding: 0 6px;
+	border-radius: 999px;
+	white-space: nowrap;
+}
+
+.agg-qc-error .agg-qc-tag {
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+}
+
+.agg-qc-warn .agg-qc-tag {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.agg-qc-info .agg-qc-tag {
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+}
+
+.agg-qc-error .agg-qc-msg {
+	color: var(--text-error);
+}
+
+.agg-qc-warn .agg-qc-msg,
+.agg-qc-info .agg-qc-msg {
+	color: var(--text-normal);
+}
+
+.agg-qc-info .agg-qc-msg {
+	color: var(--text-muted);
+}
+
+.agg-qc-msg {
+	word-break: break-all;
+}
+
+.agg-explain-result:empty {
+	display: none;
+}
+
+/* ===== Explainer 面板：分组流水线（doc/34 Step 4 分组版） ===== */
+
+/* 可折叠分组：运行中展开（details[open]），其余自动折叠 */
+.agg-explain-group {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	margin-bottom: 6px;
+	background: var(--background-primary);
+}
+
+.agg-explain-summary {
+	cursor: pointer;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--text-normal);
+	user-select: none;
+	list-style: none;
+	/* flex 让 summary 内的 .agg-explain-badge 能靠 margin-left:auto 顶到最右
+		（否则 badge 会跟着文字走，用户扫折叠列表看不出"这组有问题"）。
+		::before 生成的 ▸ 也是 flex item，视觉上和文字保持原有顺序 */
+	display: flex;
+	align-items: center;
+}
+
+.agg-explain-summary::before {
+	content: '▸ ';
+	color: var(--text-muted);
+}
+
+.agg-explain-group[open] > .agg-explain-summary::before {
+	content: '▾ ';
+}
+
+/* 分组折叠状态角标：默认隐藏，只有"这组正在跑 / 有错误待处理 / 告警"三种情况出现。
+	折叠列表扫一眼就要看出"哪一组有事情"，否则每次点开才知道要不要处理 */
+.agg-explain-badge {
+	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 1px 7px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 500;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.agg-explain-badge.is-hidden {
+	display: none;
+}
+
+.agg-explain-badge.is-running {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.agg-explain-badge.is-running::before {
+	content: '';
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--text-on-accent);
+	animation: agg-badge-pulse 1.2s ease-in-out infinite;
+}
+
+.agg-explain-badge.is-error {
+	background: var(--color-red, #e05350);
+	color: #fff;
+}
+
+.agg-explain-badge.is-warn {
+	background: var(--color-orange, #e5993e);
+	color: #fff;
+}
+
+.agg-explain-badge.is-ok {
+	background: var(--color-green, #4caf50);
+	color: #fff;
+}
+
+@keyframes agg-badge-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.3; }
+}
+
+.agg-explain-group-body {
+	padding: 10px 12px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* 参考资料框 */
+.agg-explain-ref {
+	width: 100%;
+	min-height: 48px;
+	margin: 4px 0 8px;
+}
+
+/* 分组 1：解说词可编辑区 */
+.agg-explain-narration {
+	width: 100%;
+	min-height: 120px;
+	margin-top: 8px;
+}
+
+/* 分组 0：深度调研报告审阅框（可手改；生成解说词时优先采用） */
+.agg-explain-research-ta {
+	width: 100%;
+	min-height: 220px;
+	margin-top: 8px;
+	font-size: var(--font-ui-smaller);
+	resize: vertical;
+}
+
+/* 分组 2：进度 + 缩略图 */
+.agg-explain-progress {
+	margin-bottom: 8px;
+}
+
+.agg-explain-progress-line {
+	font-size: 12px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	padding: 2px 0;
+}
+
+/* Remotion 渲染进度条（0–100%） */
+.agg-explain-progress-bar {
+	height: 6px;
+	margin-top: 4px;
+	border-radius: 999px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.agg-explain-progress-fill {
+	height: 100%;
+	width: 0;
+	background: var(--interactive-accent);
+	transition: width 0.2s ease;
+}
+
+/* 静帧缩略区三段式：标题行 + 分割线 + 图片网格，标题不与缩略图粘连。
+   外层 .agg-explain-thumbs 是 flex 列（标题/分割线/网格纵向堆叠）；
+   换行图片逻辑挪进 .agg-explain-thumb-grid（原 .agg-explain-thumbs 的 flex-wrap 规则）。
+   自动换行铺满：镜号按 thumbSlots 索引去重，不存在重复 DOM，换行是安全的。
+   之前 nowrap + overflow-x 在 40+ 镜时只剩一条横向滚动条，用户要求改成自动换行。 */
+.agg-explain-thumbs {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.agg-explain-thumb-title {
+	font-size: 12px;
+	color: var(--text-muted);
+	margin-bottom: 6px;
+}
+
+.agg-explain-thumb-divider {
+	height: 1px;
+	background: var(--background-modifier-border);
+	margin-bottom: 8px;
+}
+
+.agg-explain-thumb-grid {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 6px;
+	max-height: 260px;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding-bottom: 2px;
+}
+
+.agg-explain-thumb {
+	width: 96px;
+	flex: 0 0 auto;
+}
+
+.agg-explain-thumb-img {
+	width: 96px;
+	height: 64px;
+	object-fit: cover;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-modifier-hover);
+}
+
+/* 分组 3：素材分类 */
+.agg-explain-assets {
+	margin-bottom: 10px;
+}
+
+/* 素材行内可操作按钮组（预览 / 替换 / 删除）：靠右，与路径行内对齐 */
+.agg-explain-actions {
+	display: inline-flex;
+	gap: 4px;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+.agg-explain-actions .agg-btn-mini {
+	font-size: 11px;
+	padding: 2px 8px;
+	line-height: 1.4;
+}
+
+.agg-explain-actions .agg-btn-danger {
+	color: var(--text-error);
+}
+
+.agg-explain-audio-list {
+	max-height: 180px;
+	overflow-y: auto;
+}
+
+.agg-explain-audio-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	padding: 2px 0;
+	font-size: 12px;
+}
+
+.agg-explain-audio-row .agg-explain-td:first-child {
+	width: 40px;
+	flex-shrink: 0;
+}
+
+.agg-explain-audio-row .agg-explain-td:nth-child(2) {
+	width: 56px;
+	text-align: right;
+	flex-shrink: 0;
+}
+
+.agg-explain-path {
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 280px;
+}
+
+/* 素材/成片行：两行路径块（文件名 + 目录），完整显示不被截断 */
+.agg-explain-media-row {
+	align-items: flex-start;
+}
+
+.agg-explain-media-icon {
+	flex-shrink: 0;
+	width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-top: 4px;
+	color: var(--text-muted);
+}
+
+/* 视频缩略图：提取首帧后显示为小图，提取前显示图标占位 */
+.agg-explain-media-thumb {
+	flex-shrink: 0;
+	width: 64px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	overflow: hidden;
+	background: var(--background-secondary);
+	margin-right: 4px;
+}
+
+.agg-explain-media-thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* 配音 / BGM 行的波形缩略图：音频没有首帧，用波形当「预览图」，
+   点击即在 Obsidian 标签页里打开该音频（不再用单独的「预览/试听」按钮） */
+.agg-explain-audio-thumb,
+.agg-explain-file-thumb {
+	flex-shrink: 0;
+	width: 64px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	overflow: hidden;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	margin-right: 4px;
+}
+
+.agg-explain-audio-thumb:hover,
+.agg-explain-file-thumb:hover {
+	border-color: var(--interactive-accent);
+}
+
+.agg-explain-audio-thumb canvas,
+.agg-explain-file-thumb canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+/* 可点击的路径块（配音/BGM 行）：悬停下划线，和成片「缩略图点击即预览」同一套交互 */
+.agg-explain-clickable {
+	cursor: pointer;
+}
+
+.agg-explain-clickable:hover .agg-explain-path-name {
+	text-decoration: underline;
+}
+
+.agg-icon-media {
+	display: block;
+}
+
+.agg-explain-path-block {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.agg-explain-path-name {
+	font-size: 12px;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.agg-explain-path-dir {
+	font-size: 11px;
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 0.75;
+}
+
+/* 成片预览弹窗：视频必须按自身比例完整显示。
+   之前没有这些规则，<video> 以 1280×720 原始尺寸溢出弹窗 → 右侧被裁掉（"显示不完整"）。 */
+.agg-explain-video-modal {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+/* 撑宽外层 modal，让 16:9 成片能大一些（:has 不支持时也只是退回默认宽度，不影响完整性） */
+.modal:has(> .modal-close-button + .modal-content .agg-explain-video-modal),
+.modal:has(.agg-explain-video-modal) {
+	width: min(92vw, 1200px);
+	max-width: min(92vw, 1200px);
+}
+
+.agg-explain-video-body {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	background: #000;
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.agg-explain-video-body video {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	height: auto;
+	max-height: 78vh;
+	object-fit: contain;
+	background: #000;
+}
+
+.agg-explain-subtitle-item,
+.agg-explain-manifest-item {
+	font-size: 12px;
+	color: var(--text-normal);
+	padding: 2px 0;
+}
+
+.agg-explain-failures {
+	margin-top: 8px;
+}
+
+.agg-hint.is-warn-text {
+	color: var(--text-error);
+	font-weight: 600;
+}
+
+/* ---------- Explainer · 风格锚点输入框 + 单镜重出弹窗 ---------- */
+
+/* 风格锚点：面板上一行简短 textarea，用户可就地改风格基调 */
+.agg-explain-anchor {
+	width: 100%;
+	min-height: 32px;
+	font-size: 12px;
+	resize: vertical;
+}
+
+/* 缩略图可点击：悬停给边框高亮，明确告诉用户「可以点」 */
+.agg-explain-thumb {
+	cursor: pointer;
+}
+
+.agg-explain-thumb:hover {
+	outline: 1px solid var(--interactive-accent);
+}
+
+/* 单镜预览弹窗：正文竖向排布，图片占主体，下面三行元信息 + 按钮 */
+.agg-explain-card {
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border-radius: 10px;
+	overflow: hidden;
+	max-width: 720px;
+}
+
+.agg-explain-card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px;
+}
+
+.agg-explain-card-img {
+	max-width: 100%;
+	max-height: 62vh;
+	object-fit: contain;
+	border-radius: 6px;
+	background: var(--background-secondary);
+}
+
+.agg-explain-card-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	padding-top: 4px;
+}
+
+.agg-explain-card-actions button:disabled {
+	opacity: .55;
+	cursor: not-allowed;
+}
+
+/* 项目管理卡片 */
+.agg-explain-project-card {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px;
+	margin: 6px 0;
+	border-radius: 6px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	transition: background .15s;
+}
+
+.agg-explain-project-card:hover {
+	background: var(--background-modifier-hover);
+}
+
+.agg-explain-project-icon {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+}
+
+.agg-explain-project-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.agg-explain-project-topic {
+	font-weight: 600;
+	font-size: 13px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.agg-explain-project-meta {
+	font-size: 11px;
+	color: var(--text-muted);
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.agg-explain-actions {
+	display: flex;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.agg-btn.is-armed {
+	animation: agg-btn-pulse 1s ease-in-out infinite;
+}
+
+@keyframes agg-btn-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: .7; }
+}
+
+/* ---------- VIP 激活弹窗 ---------- */
+.agnes-btn-row {
+	display: flex;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.agnes-primary {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: 1px solid var(--interactive-accent);
+	border-radius: var(--button-radius, 6px);
+	padding: 6px 16px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.agnes-primary:hover {
+	background: var(--interactive-accent-hover);
+}
+
+.agnes-vip-code-input {
+	width: 100%;
+	font-family: var(--font-monospace);
+	letter-spacing: 0.5px;
+}
+
+/* 设置页里被 VIP 锁定的分区说明 */
+.agg-locked-note {
+	margin: 8px 0 4px;
+	padding: 6px 10px;
+	border-radius: 6px;
+	font-size: 12px;
+	color: var(--text-warning);
+	background: var(--background-secondary);
+	border: 1px dashed var(--background-modifier-border);
+}
+
+/* ---------- 广告 / 赞助横幅 ---------- */
+.agnes-ad-banner {
+	position: fixed;
+	left: 50%;
+	bottom: 16px;
+	transform: translateX(-50%);
+	z-index: var(--layer-modal, 200);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	max-width: min(680px, 92vw);
+	padding: 8px 12px;
+	border-radius: 10px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+	font-size: 12px;
+	color: var(--text-normal);
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.agnes-ad-banner:not(.agnes-ad-banner--hidden) {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+}
+
+.agnes-ad-banner__text {
+	flex: 1;
+	min-width: 0;
+}
+
+.agnes-ad-banner__open {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: 1px solid var(--interactive-accent);
+	font-weight: 600;
+}
+
+.agnes-ad-banner__open:hover {
+	background: var(--interactive-accent-hover);
+}
+
+.agnes-ad-banner__channel {
+	color: var(--text-accent);
+	background: var(--interactive-normal);
+}
+
+.agnes-ad-banner__close {
+	padding: 0 8px;
+	font-size: 16px;
+	line-height: 1;
+	color: var(--text-muted);
+}

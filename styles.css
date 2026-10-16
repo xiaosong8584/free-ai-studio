@@ -21,10 +21,25 @@
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.agg-head-title {
-	font-size: 15px;
-	font-weight: 600;
-	letter-spacing: 0.2px;
+/* 品牌标识：图标 + 文字标均为透明底（base64 内联，src/ui/brand.ts），
+   明暗主题均可融入标题栏。图标 96px 资源显示 24px；文字标 2x 资源
+   显示 31.5px（字形约 15px，与原 font-size 一致）。 */
+.agg-head-brand {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.agg-head-brand-icon {
+	height: 24px;
+	width: 24px;
+	display: block;
+}
+
+.agg-head-brand-wordmark {
+	height: 31.5px;
+	width: auto;
+	display: block;
 }
 
 .agg-badge {
@@ -996,9 +1011,13 @@
 	transition: width 0.3s;
 }
 
-/* 通用隐藏：用 class 而不是逐处写 inline style，便于主题与维护 */
+/* 通用隐藏：用 class 而不是逐处写 inline style，便于主题与维护。
+   必须带 !important：本文件里 .agg-inline（display:flex）/ .agg-check
+   （display:inline-flex）等规则定义在它**之后**，同特异性下会把它覆盖掉，
+   导致配音页切引擎后 edge-only 控件藏不掉 —— 三引擎的行 div 和复选框
+   全部同时挂 agg-hidden + 这些布局类，正是被覆盖的高发区。 */
 .agg-hidden {
-	display: none;
+	display: none !important;
 }
 
 .agg-task-error {
@@ -1098,6 +1117,98 @@
 .agg-btn-danger:hover {
 	background: var(--text-error);
 	color: var(--text-on-accent);
+}
+
+/* ===== InkOS 写作台 ===== */
+.agg-inkos {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.agg-inkos-head {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+.agg-inkos-title {
+	flex: 1 1 140px;
+	min-width: 120px;
+}
+.agg-inkos-body {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+}
+.agg-inkos-chapters {
+	flex: 0 0 180px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.agg-inkos-sub {
+	font-weight: 600;
+	opacity: 0.85;
+}
+.agg-inkos-chlist {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.agg-inkos-chitem {
+	padding: 4px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	cursor: pointer;
+}
+.agg-inkos-chitem-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+.agg-inkos-editor {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+.agg-inkos-chbody {
+	min-height: 220px;
+}
+.agg-inkos-assets {
+	min-height: 90px;
+}
+.agg-inkos-assethint {
+	font-size: 0.8em;
+	opacity: 0.7;
+}
+.agg-inkos-actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.agg-inkos-preview {
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: 8px;
+}
+.agg-inkos-sbtable {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	max-height: 260px;
+	overflow: auto;
+}
+.agg-inkos-sbrow {
+	display: grid;
+	grid-template-columns: 28px 70px 90px 1fr;
+	gap: 6px;
+	font-size: 0.85em;
+}
+.agg-inkos-sbidx {
+	font-weight: 700;
+}
+.agg-inkos-sbvp {
+	opacity: 0.85;
 }
 
 .agg-empty-hint {
@@ -2353,6 +2464,39 @@
 
 /* ==================== MTV 面板（阶段 D3） ==================== */
 
+/* 项目条：下拉 + 新建/删除 + 保存状态点（● = 有未保存修改） */
+.agg-mtv-project-bar {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	flex-wrap: wrap;
+	margin-bottom: 10px;
+}
+
+.agg-mtv-project-bar .agg-canvas-select {
+	flex: 1 1 auto;
+	min-width: 180px;
+}
+
+.agg-mtv-save-state {
+	font-size: 12px;
+	color: var(--text-accent);
+	width: 12px;
+}
+
+/* 大文本框（创作意图 / 歌词）整块撑满。
+   Obsidian 的 .setting-item 默认是「信息列 | 控件列」左右分栏，且控件列按内容
+    intrinsic 定宽：textarea 的 width:100% 解析不到 auto 宽的控件列上，空内容时
+   只缩到约 20 列宽（右侧空一大片）。改为上下堆叠后，标题/描述在上，输入框独占
+   一行并贴齐面板左右边缘。 */
+.agg-mtv-field-stack {
+	display: block;
+}
+
+.agg-mtv-field-stack .setting-item-info {
+	margin-bottom: 6px;
+}
+
 .agg-mtv-btn-row {
 	display: flex;
 	gap: 8px;
@@ -2361,6 +2505,232 @@
 
 .agg-mtv-btn-row button {
 	flex: 0 0 auto;
+}
+
+/* 全部项目资产：标题行（含刷新按钮）+ 按歌曲名分组的缩略图卡片墙 */
+.agg-mtv-assets {
+	margin-top: 12px;
+}
+
+.agg-mtv-assets-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 4px;
+}
+
+.agg-mtv-assets-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.agg-mtv-assets-refresh {
+	font-size: 12px;
+	padding: 2px 10px;
+}
+
+/* 分组容器：一组一首歌 */
+.agg-mtv-asset-groups {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.agg-mtv-asset-group {
+	min-width: 0;
+}
+
+/* 当前项目：左侧强调条 + 淡底，分组墙里一眼定位 */
+.agg-mtv-asset-group.is-current {
+	border-left: 2px solid var(--interactive-accent);
+	padding-left: 8px;
+	margin-left: -10px;
+}
+
+/* 组头：歌名（点击切换项目）+ 当前标记 + 成果摘要 */
+.agg-mtv-asset-group-head {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 3px 6px;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+.agg-mtv-asset-group-head:hover {
+	background: var(--background-modifier-hover);
+}
+
+.agg-mtv-asset-group-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.agg-mtv-asset-group-badge {
+	font-size: 10px;
+	line-height: 1.6;
+	color: var(--text-on-accent);
+	background: var(--interactive-accent);
+	border-radius: 4px;
+	padding: 0 6px;
+}
+
+.agg-mtv-asset-group-tags {
+	font-size: 11px;
+	color: var(--text-muted);
+}
+
+.agg-mtv-asset-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+	gap: 10px;
+	margin-top: 6px;
+}
+
+.agg-mtv-asset-card {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary);
+}
+
+.agg-mtv-asset-thumb {
+	width: 100%;
+	aspect-ratio: 3 / 2;
+	object-fit: cover;
+	border-radius: 5px;
+	background: var(--background-primary);
+	display: block;
+}
+
+/* 歌曲没有缩略图：音符占位块（3:2 与图片卡对齐） */
+.agg-mtv-asset-icon {
+	width: 100%;
+	aspect-ratio: 3 / 2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 34px;
+	color: var(--text-muted);
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 5px;
+	background: var(--background-primary);
+}
+
+.agg-mtv-asset-name {
+	font-size: 11px;
+	line-height: 1.4;
+	color: var(--text-muted);
+	word-break: break-all;
+}
+
+.agg-mtv-asset-actions {
+	display: flex;
+	gap: 4px;
+}
+
+.agg-mtv-asset-actions button {
+	flex: 1;
+	font-size: 11px;
+	padding: 2px 0;
+}
+
+.agg-mtv-asset-actions button:disabled {
+	opacity: 0.5;
+}
+
+.agg-mtv-asset-del {
+	color: var(--text-error);
+}
+
+.agg-mtv-asset-empty {
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+/* 进度区：步骤条 + 进度条同一行收尾，计时行小字 */
+.agg-mtv-progress-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 8px 0 4px;
+}
+
+.agg-mtv-progress-row .agg-progress {
+	flex: 1;
+}
+
+.agg-mtv-progress-pct {
+	flex: 0 0 auto;
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	min-width: 34px;
+	text-align: right;
+}
+
+.agg-mtv-run-info {
+	font-size: 12px;
+	line-height: 1.6;
+	color: var(--text-muted);
+	min-height: 18px;
+}
+
+/* 「创作后自动生成成片」复选框：贴着一键创作按钮，不单独占一行 */
+.agg-mtv-autorun {
+	margin-left: 4px;
+	align-self: center;
+}
+
+/* 本地音轨行（ZeroGPU 额度用尽时的兜底：跳过 ACE-Step 作曲） */
+.agg-mtv-localsong {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 6px 0;
+	padding: 6px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+}
+
+.agg-mtv-localsong-title {
+	font-size: 12px;
+	color: var(--text-muted);
+	flex: none;
+}
+
+.agg-mtv-localsong-name {
+	font-size: 12px;
+	color: var(--text-faint);
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 已设置本地音轨：高亮成「将跳过作曲」的状态 */
+.agg-mtv-localsong-name.is-set {
+	color: var(--text-accent);
+}
+
+.agg-mtv-localsong-actions {
+	display: flex;
+	gap: 6px;
+	flex: none;
+}
+
+/* promptModal 输入框（重命名）全宽 */
+.agg-prompt-input {
+	width: 100%;
+	box-sizing: border-box;
+	margin-bottom: 4px;
 }
 
 .agg-mtv-result {
@@ -2629,6 +2999,32 @@
 	background: var(--background-modifier-error);
 	color: var(--text-on-accent);
 	font-weight: 600;
+}
+
+/* ===== anatomy 仪器帧列（等轴 SVG 预览，零 Remotion 改动）===== */
+.agg-explain-anatomy-cell {
+	vertical-align: middle;
+	max-width: 200px;
+}
+.agg-explain-anatomy-cell svg.iso-svg {
+	width: 140px;
+	height: auto;
+	display: block;
+	margin-bottom: 4px;
+}
+.agg-explain-anatomy-readout {
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	color: var(--text-normal);
+	white-space: nowrap;
+}
+.agg-explain-anatomy-hint {
+	font-size: var(--font-ui-smallest, 10px);
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 200px;
 }
 
 /* ===== Explainer 面板：素材阶段（doc/34 Step 4）===== */
@@ -2911,14 +3307,14 @@
 	margin: 4px 0 8px;
 }
 
-/* 分组 1：解说词可编辑区 */
+/* 解说词可编辑区 */
 .agg-explain-narration {
 	width: 100%;
 	min-height: 120px;
 	margin-top: 8px;
 }
 
-/* 分组 0：深度调研报告审阅框（可手改；生成解说词时优先采用） */
+/* 深度调研报告审阅框（可手改；生成解说词时优先采用） */
 .agg-explain-research-ta {
 	width: 100%;
 	min-height: 220px;
@@ -2927,7 +3323,7 @@
 	resize: vertical;
 }
 
-/* 分组 2：进度 + 缩略图 */
+/* 进度行（分镜 / 出图 / 配音 共用；缩略图另有 .agg-explain-thumbs） */
 .agg-explain-progress {
 	margin-bottom: 8px;
 }
@@ -3003,7 +3399,7 @@
 	background: var(--background-modifier-hover);
 }
 
-/* 分组 3：素材分类 */
+/* 素材分类 */
 .agg-explain-assets {
 	margin-bottom: 10px;
 }
@@ -3426,4 +3822,896 @@
 	font-size: 16px;
 	line-height: 1;
 	color: var(--text-muted);
+}
+
+/* ===== 让女神跳舞：素材预览 ===== */
+
+/* 未选素材时容器为空，直接折叠，不留一块空白 */
+.agg-dancer-preview:empty {
+	display: none;
+}
+
+.agg-dancer-preview {
+	margin: 0 0 10px;
+}
+
+.agg-dancer-thumb {
+	display: block;
+	max-width: 116px;
+	max-height: 152px;
+	border-radius: 10px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	object-fit: cover;
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.agg-dancer-thumb:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.agg-dancer-note {
+	font-size: 12px;
+	color: var(--text-muted);
+	margin-top: 4px;
+}
+
+/* 音频不足 10 秒：提交必然失败，用报错色拦在前面 */
+.agg-dancer-note-warn {
+	color: var(--text-error);
+}
+
+/* ===== 让女神跳舞：按钮行 ===== */
+/* 与 MtvPanel 同款间距纪律。此前面板用了 agg-dancer-btn-row 这个类名却没写规则，
+   两个按钮（生成 / 停止）完全贴在一起，用户反馈"按钮距离太近"。 */
+.agg-dancer-btn-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 12px 0 8px;
+}
+
+.agg-dancer-btn-row button {
+	flex: 0 0 auto;
+	padding: 6px 16px;
+	border-radius: 8px;
+	font-weight: 600;
+	transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.agg-dancer-btn-row button:hover:not(:disabled) {
+	transform: translateY(-1px);
+	filter: brightness(1.05);
+}
+
+.agg-dancer-btn-row button:active:not(:disabled) {
+	transform: translateY(0);
+}
+
+.agg-dancer-btn-row button:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+/* ===== 让女神跳舞：生成进度 ===== */
+/* 未开始生成时容器带 .agg-hidden（display:none），不会留一条空进度条占位 */
+.agg-dancer-progress {
+	margin: 10px 0 8px;
+}
+
+.agg-dancer-progress-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+/* 百分比与「起始 / 已用」都用等宽数字：9% → 10%、0:09 → 0:10 时不左右抖动 */
+.agg-dancer-progress-pct {
+	font-size: 19px;
+	font-weight: 700;
+	line-height: 1.1;
+	letter-spacing: -0.02em;
+	color: var(--interactive-accent);
+	font-variant-numeric: tabular-nums;
+}
+
+.agg-dancer-progress-meta {
+	font-size: 11px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.agg-dancer-progress-bar {
+	position: relative;
+	height: 8px;
+	margin-top: 6px;
+	border-radius: 999px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.agg-dancer-progress-fill {
+	position: relative;
+	overflow: hidden;
+	height: 100%;
+	width: 0;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--interactive-accent), var(--interactive-accent-hover));
+	/* 每 0.5s 推进一次，0.3s 过渡让台阶感消失 */
+	transition: width 0.3s ease;
+}
+
+/* 运行中：一道半透明白光横扫，传达「仍在推进」而不是卡死 */
+.agg-dancer-progress:not(.is-done):not(.is-error) .agg-dancer-progress-fill::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		100deg,
+		transparent 20%,
+		rgba(255, 255, 255, 0.45) 50%,
+		transparent 80%
+	);
+	transform: translateX(-100%);
+	animation: agg-dancer-sheen 1.6s ease-in-out infinite;
+}
+
+@keyframes agg-dancer-sheen {
+	to {
+		transform: translateX(100%);
+	}
+}
+
+/* 成功：条子与百分比一起染绿 */
+.agg-dancer-progress.is-done .agg-dancer-progress-fill {
+	background: var(--color-green);
+}
+
+.agg-dancer-progress.is-done .agg-dancer-progress-pct {
+	color: var(--color-green);
+}
+
+/* 失败：用报错色，且停在失败当时的进度 —— 不假装走满 */
+.agg-dancer-progress.is-error .agg-dancer-progress-fill {
+	background: var(--text-error);
+}
+
+.agg-dancer-progress.is-error .agg-dancer-progress-pct {
+	color: var(--text-error);
+}
+
+/* ===== 让女神跳舞：成片条目列表 ===== */
+/* 「列表 = 磁盘上的成片」：直接扫描输出目录渲染卡片，不额外维护索引。
+   卡片用 <video> 首帧当预览图，点预览图即在新标签页打开（已无独立「打开」按钮）。 */
+
+.agg-dancer-outputs {
+	margin-top: 18px;
+}
+
+.agg-dancer-outputs-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.agg-dancer-section-title {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.6px;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+.agg-dancer-count {
+	font-size: 11px;
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.agg-dancer-empty {
+	padding: 14px;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 10px;
+	font-size: 12px;
+	text-align: center;
+	color: var(--text-faint);
+}
+
+.agg-dancer-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+	gap: 10px;
+}
+
+.agg-dancer-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 12px;
+	background: var(--background-secondary);
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.agg-dancer-card:hover {
+	transform: translateY(-2px);
+	border-color: var(--interactive-accent);
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+/* 最新一片：常驻 accent 描边 */
+.agg-dancer-card.is-latest {
+	border-color: var(--interactive-accent);
+}
+
+.agg-dancer-card-thumb {
+	position: relative;
+	aspect-ratio: 9 / 16;
+	background: var(--background-primary);
+}
+
+.agg-dancer-card-video {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* 播放图标：hover 才淡入；底部渐变让白色图标在任意画面上都看得清 */
+.agg-dancer-card-play {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 22px;
+	color: #fff;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.5));
+	pointer-events: none;
+}
+
+.agg-dancer-card:hover .agg-dancer-card-play {
+	opacity: 1;
+}
+
+.agg-dancer-badge {
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	z-index: 1;
+	padding: 2px 7px;
+	border-radius: 999px;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+/* 删除：hover 卡片才出现，否则一排 ✕ 会淹没预览图 */
+.agg-dancer-del {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	z-index: 1;
+	display: none;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.5);
+	color: #fff;
+	font-size: 11px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.agg-dancer-card:hover .agg-dancer-del {
+	display: block;
+}
+
+.agg-dancer-del:hover {
+	background: var(--text-error);
+}
+
+.agg-dancer-card-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 7px 8px 8px;
+}
+
+.agg-dancer-card-name {
+	overflow: hidden;
+	font-size: 11.5px;
+	font-weight: 600;
+	color: var(--text-normal);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agg-dancer-card-sub {
+	font-size: 10.5px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 已选素材路径（dancer 面板；别的面板若有同类需求可直接复用）
+   Setting 的 desc 本身是灰色小字，这里单独强调，并用等宽字体 + 断词，
+   否则深层目录 + 长文件名的 Vault 路径会把这一行撑得很长 */
+.agg-chosen {
+	margin-top: 4px;
+	font-size: 11.5px;
+	font-family: var(--font-monospace);
+	color: var(--text-accent);
+	word-break: break-all;
+}
+
+/* 舞种（读自成片旁的侧车 JSON）：给一点 accent 色，和时间/大小区分开 */
+.agg-dancer-card-genre {
+	margin-top: 2px;
+	font-size: 10.5px;
+	color: var(--text-accent);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ---------- 步骤流水区 ----------
+   状态行是单行覆盖的，后一条冲掉前一条，事后无从回溯「刚才做了哪些修复」。
+   这里保留一份带时间戳的流水，限高滚动，避免长任务把面板撑到看不见成片列表。 */
+.agg-dancer-steps {
+	margin: 10px 0 4px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: 6px 8px;
+	background: var(--background-secondary);
+}
+
+.agg-dancer-steps > summary {
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+.agg-dancer-steps-copy {
+	margin: 6px 0 4px;
+	padding: 2px 8px;
+	font-size: 11px;
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--interactive-normal);
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.agg-dancer-steps-copy:hover {
+	background: var(--interactive-hover);
+}
+
+.agg-dancer-steps-log {
+	max-height: 150px;
+	overflow-y: auto;
+	font-size: 11.5px;
+	line-height: 1.55;
+}
+
+.agg-dancer-step {
+	display: flex;
+	gap: 8px;
+	padding: 1px 0;
+}
+
+/* 时间戳用等宽数字：否则每 0.5s 刷新时宽度忽宽忽窄，整块会抖 */
+.agg-dancer-step-time {
+	flex: none;
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.agg-dancer-step-msg {
+	color: var(--text-muted);
+	word-break: break-word;
+}
+
+.agg-dancer-step-empty {
+	color: var(--text-faint);
+	font-style: italic;
+}
+
+/* ---------- AI 修图候选 ---------- */
+.agg-dancer-candidates:empty {
+	display: none;
+}
+
+.agg-dancer-cand-title {
+	margin: 6px 0 4px;
+	font-size: 11.5px;
+	font-weight: 500;
+	color: var(--text-muted);
+}
+
+.agg-dancer-cand-row {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.agg-dancer-cand {
+	width: 72px;
+	border-radius: var(--radius-s);
+	overflow: hidden;
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	background: var(--background-secondary);
+}
+
+.agg-dancer-cand:hover {
+	border-color: var(--text-accent);
+}
+
+/* 选中的那张给 accent 描边 + 轻微下沉，一眼看出当前提交的是哪张 */
+.agg-dancer-cand.is-picked {
+	border-color: var(--text-accent);
+	box-shadow: 0 0 0 1px var(--text-accent);
+}
+
+.agg-dancer-cand-img {
+	display: block;
+	width: 100%;
+	height: 128px;
+	object-fit: cover;
+}
+
+/* ---------- 背景视频（B-roll）面板 ---------- */
+.agg-broll-head {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 10px;
+}
+.agg-broll-title {
+	font-size: 15px;
+	font-weight: 600;
+}
+.agg-broll-steps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.agg-broll-step {
+	font-size: 11px;
+	padding: 2px 8px;
+	border-radius: 10px;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	border: 1px solid transparent;
+}
+.agg-broll-step.is-done {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+.agg-broll-section {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 10px 12px;
+	margin-bottom: 12px;
+}
+.agg-broll-section h3 {
+	margin: 0 0 8px;
+	font-size: 13px;
+}
+.agg-broll-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+.agg-broll-field {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	font-size: 11px;
+	color: var(--text-muted);
+}
+.agg-broll-field input {
+	width: 100%;
+}
+.agg-broll-btnrow {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+.agg-broll-segs {
+	margin-top: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.agg-broll-segcount {
+	font-size: 12px;
+	font-weight: 600;
+}
+.agg-broll-seg {
+	display: flex;
+	gap: 8px;
+	font-size: 11px;
+	align-items: baseline;
+}
+.agg-broll-seg-h {
+	color: var(--text-accent);
+	white-space: nowrap;
+}
+.agg-broll-seg-t {
+	color: var(--text-muted);
+}
+.agg-broll-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 8px;
+}
+.agg-broll-card {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 8px;
+}
+.agg-broll-card-h {
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+.agg-broll-appear {
+	font-size: 11px;
+	color: var(--text-muted);
+	white-space: pre-wrap;
+	margin-bottom: 6px;
+}
+.agg-broll-lockrow {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.agg-broll-thumb {
+	width: 72px;
+	height: 96px;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+}
+.agg-broll-imgrid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+.agg-broll-pre {
+	white-space: pre-wrap;
+	font-size: 11px;
+	max-height: 260px;
+	overflow: auto;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	padding: 8px;
+	margin-top: 8px;
+}
+.agg-broll-status {
+	font-size: 11px;
+	color: var(--text-muted);
+	min-height: 16px;
+	margin-top: 6px;
+}
+
+/* ==================== 无限画布 ==================== */
+.agg-canvas-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	height: 100%;
+	min-height: 0;
+}
+.agg-canvas-topbar,
+.agg-canvas-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+.agg-canvas-select {
+	flex: 1 1 160px;
+	min-width: 140px;
+}
+.agg-canvas-zoom {
+	font-size: 11px;
+	color: var(--text-muted);
+	min-width: 40px;
+	text-align: center;
+}
+.agg-canvas-hint {
+	font-size: 11px;
+	color: var(--text-accent);
+	background: var(--background-secondary);
+	border-radius: 6px;
+	padding: 4px 8px;
+}
+.agg-canvas-viewport {
+	position: relative;
+	flex: 1 1 auto;
+	min-height: 320px;
+	overflow: hidden;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background-color: var(--background-primary);
+	background-image: radial-gradient(var(--background-modifier-border) 1px, transparent 1px);
+	background-size: 24px 24px;
+	cursor: grab;
+}
+.agg-canvas-viewport:active {
+	cursor: grabbing;
+}
+.agg-canvas-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	transform-origin: 0 0;
+	will-change: transform;
+}
+.agg-canvas-links {
+	position: absolute;
+	left: 0;
+	top: 0;
+	overflow: visible;
+	pointer-events: none;
+}
+.agg-canvas-link {
+	fill: none;
+	stroke: var(--text-accent);
+	stroke-width: 2;
+	opacity: 0.7;
+	pointer-events: stroke;
+	cursor: pointer;
+}
+.agg-canvas-link:hover {
+	stroke: var(--text-error);
+	opacity: 1;
+}
+.agg-canvas-node {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+	cursor: grab;
+	user-select: none;
+}
+/* 拖动中的节点：置顶、半透明（配合 JS 的 is-dragging） */
+.agg-canvas-node.is-dragging {
+	cursor: grabbing;
+	z-index: 10;
+	opacity: 0.92;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+}
+.agg-canvas-node.is-selected {
+	border-color: var(--text-accent);
+	box-shadow: 0 0 0 2px var(--text-accent-hover);
+}
+/* 拼接多选态：虚线边框 + 序号角标由节点内元素负责（序号在 paint 时标） */
+.agg-canvas-node.is-multisel {
+	border-style: dashed;
+	border-color: var(--text-success);
+	box-shadow: 0 0 0 2px var(--text-success);
+}
+
+/* 拼接顺序角标（①②③…）：节点左上角小圆片 */
+.agg-canvas-order-badge {
+	position: absolute;
+	top: -10px;
+	left: -10px;
+	z-index: 2;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 5px;
+	border-radius: 10px;
+	background: var(--text-success);
+	color: var(--background-primary);
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 20px;
+	text-align: center;
+	pointer-events: none;
+}
+
+/* ---------- 统一画廊 ---------- */
+.agg-gallery-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-content: flex-start;
+	overflow-y: auto;
+}
+.agg-gallery-card {
+	width: 180px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.agg-gallery-thumb {
+	position: relative;
+	height: 120px;
+	border-radius: 8px;
+	overflow: hidden;
+	background: var(--background-secondary);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.agg-gallery-thumb img,
+.agg-gallery-thumb video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+.agg-gallery-badge {
+	position: absolute;
+	left: 6px;
+	top: 6px;
+	padding: 1px 8px;
+	border-radius: 10px;
+	background: var(--text-success);
+	color: var(--background-primary);
+	font-size: 11px;
+	font-weight: 600;
+}
+.agg-gallery-name {
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.agg-gallery-sub {
+	font-size: 11px;
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.agg-canvas-node.is-running {
+	opacity: 0.75;
+	border-color: var(--text-accent);
+}
+.agg-canvas-node.is-failed {
+	border-color: var(--text-error);
+}
+.agg-canvas-node-head {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 6px;
+	background: var(--background-modifier-hover);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+.agg-canvas-node-title {
+	flex: 1 1 auto;
+	font-size: 12px;
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.agg-canvas-icon-btn {
+	border: none;
+	background: none;
+	cursor: pointer;
+	padding: 0 2px;
+	font-size: 11px;
+	line-height: 1;
+}
+.agg-canvas-node-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+	padding: 6px;
+	font-size: 11px;
+}
+.agg-canvas-node-text {
+	white-space: pre-wrap;
+	word-break: break-word;
+	color: var(--text-muted);
+}
+.agg-canvas-node-img {
+	display: block;
+	width: 100%;
+	max-height: 120px;
+	object-fit: contain;
+	background: var(--background-primary);
+}
+.agg-canvas-node-video {
+	display: block;
+	width: 100%;
+	max-height: 140px;
+}
+.agg-canvas-node-note {
+	color: var(--text-accent);
+	margin-bottom: 4px;
+}
+.agg-canvas-node-err {
+	color: var(--text-error);
+	margin-bottom: 4px;
+	word-break: break-word;
+}
+.agg-canvas-node-foot {
+	padding: 4px 6px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+.agg-canvas-gen {
+	width: 100%;
+	font-size: 11px;
+}
+.agg-canvas-dot {
+	position: absolute;
+	right: -6px;
+	top: 50%;
+	width: 11px;
+	height: 11px;
+	margin-top: -6px;
+	border-radius: 50%;
+	background: var(--text-accent);
+	border: 2px solid var(--background-primary);
+	cursor: crosshair;
+}
+.agg-canvas-dot:hover {
+	transform: scale(1.3);
+}
+.agg-canvas-empty {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-faint);
+	font-size: 12px;
+	pointer-events: none;
+}
+.agg-canvas-status {
+	font-size: 11px;
+	color: var(--text-muted);
+	min-height: 16px;
+}
+/* 节点编辑弹窗 */
+.agg-canvas-modal-label {
+	display: block;
+	font-size: 11px;
+	color: var(--text-muted);
+	margin: 8px 0 3px;
+}
+.agg-canvas-modal-input,
+.agg-canvas-modal-area,
+.agg-canvas-modal-select {
+	width: 100%;
+	box-sizing: border-box;
+}
+.agg-canvas-modal-area {
+	resize: vertical;
+}
+.agg-canvas-modal-bar {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 12px;
 }

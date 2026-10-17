@@ -15,10 +15,10 @@ Generate **text / images / videos / voiceover / novel covers / talking-head avat
 
 | Panel | Capabilities |
 |------|------|
-| **Text** | 4 modes (free-form writing / short-drama outline / storyboard script / prompt optimization); JSON output auto-rendered as structured blocks; saved as notes with frontmatter |
+| **Text** | 4 modes (free-form writing / short-drama outline / storyboard script / prompt optimization) + **6 script-quality modes** (health check / rewrite / 70-episode split / lock-code design / 8-step storyboard / first-last-frame inheritance); JSON output auto-rendered as structured blocks; saved as notes with frontmatter |
 | **Image** | Text-to-image / image-to-image; reference images can be picked from **the Vault**, **uploaded locally**, or pasted as a URL; auto-compressed and normalized; concurrency guard against 429s |
 | **Video** | Text-to-video / image-to-video; four-branch protocol; tasks persisted — **auto-resume on restart** |
-| **Voiceover** | **edge-tts free TTS** (9 voices / 6 emotions / 3 speeds / punctuation pauses) + **Doubao Seed-Audio full-episode dubbing** (multi-role dialogue + ambient + BGM + word-level subtitles) |
+| **Voiceover** | **Doubao Seed-Audio full-episode dubbing** (multi-role dialogue + ambient + BGM + word-level subtitles) + **Audio8 local engine** (self-hosted, free) + **MTV** music-video montage. *The edge-tts engine (9 voices / 6 emotions / 3 speeds / punctuation pauses) is **VIP*** |
 | **Short Drama** | Outline → synopsis → storyboard JSON → per-shot images → per-shot videos → **voiceover → final render** → Markdown note, one-click orchestration |
 | **Red Fruit Pro** | Script → storyboard → character art → first/last frames → video → voiceover → final render, **seven-stage orchestration**; multi-version selection + rewrite + pinpoint correction; **per-shot API-key rotation**; resume-from-breakpoint + per-stage re-run |
 | **Cover** | Title + author + synopsis (**imports TXT/DOCX**) → text model produces a prompt → image → **crop to target aspect** → **lay out title/author** → writes three files into the Vault; live layout preview |
@@ -41,6 +41,28 @@ Generate **text / images / videos / voiceover / novel covers / talking-head avat
 - **Task cleanup**: 30-day auto + manual button
 - **Popout window and theme switching support**
 - **UI accessibility**: 5-second-confirmation modals for destructive actions, status chips, collapse badges, visible keyboard shortcuts, focus-visible styles
+
+---
+
+## VIP Features & Disclosure
+
+This plugin is free to use for its core generation features. The following **advanced pipelines are VIP-only** (require activation; the tab/command is hidden for non-VIP users and appears after activation):
+
+| VIP-only feature | What it does |
+|------------------|--------------|
+| **Red Fruit Pro** (`pro`) | Seven-stage short-drama film orchestration |
+| **Talking Head** (`anchor`) | Four-stage portrait-to-video avatar pipeline |
+| **Cover** (`cover`) | Novel-cover generation with title/author layout |
+| **Let Her Dance** (`dancer`) | Wan-Dancer music-driven dance video generation (Aliyun DashScope `wan2.2-dancer`) |
+| **B-roll Background Video** (`broll`) | Five-stage idempotent pipeline: material → plan → storyboard → keyframe images → clips, with the three-step character flow (profile / design / anchor) |
+| **InkOS Writing Desk** (`inkos`) | Vault-native novel projects: chapters, assets, AI continuation, chapter → storyboard JSON handoff to Red Fruit Pro |
+| **Infinite Canvas** (`canvas`) | Node-graph orchestration: text / image / video nodes, dependency links, parallel generation, first-frame inheritance |
+| **edge-tts engine** (Voiceover → engine) | Microsoft edge-tts: 9 voices / 6 emotions / 3 speeds / punctuation pauses. Non-VIP users still get **Doubao** (API key) and **Audio8** (self-hosted, free), and the option is disabled (not silently broken) |
+| **8 extra UI languages** (Settings → Language) | Japanese, Korean, Russian, Arabic (RTL), Hindi, Spanish, French, German. Incremental translation packs covering the core UI; untranslated strings fall back to English. **Simplified Chinese and English stay free forever** |
+
+All other panels — **Text, Image, Video, Drama, Voiceover, Explainer, MTV, Gallery, Log** — plus unified multi-vendor API management, account pools, and ffmpeg post-production — remain **free forever**. Script-quality tooling (script check / rewrite / 70-episode split / lock-code design / 8-step storyboard / first-last frame inheritance) ships inside the free **Text** panel.
+
+> **Obsidian Developer Policies compliance:** this plugin offers *optional payments*. No feature is removed from the free tier to force payment — the VIP panels are additive enhancements.
 
 ---
 
@@ -109,12 +131,18 @@ custom model → {vendor}_key → text_api_key → agnes global key → agnes_ex
 
 ## Known Limitations
 
+- **Edge-TTS voiceover uses an undocumented endpoint**: Microsoft upgraded the read-aloud
+  protocol in Oct 2026 (`Sec-MS-GEC-Version` `1-` → `2-`, token format changed). This plugin
+  implements the v2 token and keeps v1 as a fallback — but `speech.platform.bing.com` is not a
+  public API, has no SLA, and Microsoft may tighten it again. For business use, assess this
+  yourself or use the **Audio8 local engine** / **Doubao** routes. Analysis:
+  [`doc/40-edge-tts-v2-and-compliance.md`](doc/40-edge-tts-v2-and-compliance.md)
 - **Desktop only**: voiceover, final render, Red Fruit Pro's render stage, and Talking-Head's render stage all require Node + an external ffmpeg binary
 - **No streaming text output**: `requestUrl` does not support SSE
 - **Large videos (>100 MB)**: read fully into memory, may OOM
 - **Cover generation**: fonts are not bundled; Chinese rendering depends on the system font stack
 - **Multi-reference images**: multiple URLs supported, but no "reference-board merge"
-- **MTV generation, infinite canvas, InkOS writing desk**: not yet implemented
+- **B-roll / InkOS / Canvas panels**: unit-tested and ffmpeg-chain verified, but not yet click-verified inside the Obsidian UI
 
 ---
 
@@ -134,6 +162,39 @@ All three flagship pipelines (short-drama, Red Fruit Pro, Talking-Head) flush ev
 
 **Q: How do I update the plugin?**
 Download the latest release and overwrite the four files under `.obsidian/plugins/agnes-ai-studio/`, then restart Obsidian. **Note**: settings live in `data.json`, which is not part of the zip — overwriting never loses your configuration.
+
+---
+
+## Third-party Notices
+
+This plugin bundles no third-party source code. It does, however, reimplement one
+protocol that is documented publicly and originated in an LGPL-licensed project, plus
+it calls one undocumented Microsoft endpoint. Both deserve to be stated plainly.
+
+**Edge TTS — protocol reimplemented, project under LGPLv3**
+
+The free voiceover engine speaks the Edge browser's read-aloud WebSocket protocol.
+The reference implementation is [rany2/edge-tts](https://github.com/rany2/edge-tts),
+licensed **LGPLv3** (relicensed 2024-11-22; its README badge still says MIT — that is
+stale). This plugin implements the protocol **independently** from the publicly
+documented behaviour: the signing step calls Node's built-in `crypto.createHash`
+rather than any code taken from that project, and the tick arithmetic is dictated by
+Microsoft's own endpoint. Attribution is recorded in `src/core/tts.ts`.
+
+If a future release ports the DRM/token algorithm from that project, it must ship as
+LGPLv3 with the full GPL + LGPL texts — see `doc/40-edge-tts-v2-and-compliance.md`
+for the full analysis and the three implementation options.
+
+**Edge TTS — undocumented endpoint, no SLA**
+
+`speech.platform.bing.com` is not a public API. Microsoft's Edge EULA forbids reverse
+engineering and working around technical limitations. There is no SLA, no quota
+commitment, and no guarantee of continued availability; the endpoint has been tightened
+several times (403 waves, endpoint changes, and a token-format upgrade in October 2026).
+**Using it is a fact of the moment, not a contractual grant.** Commercial deployments
+should assess this themselves, or use the Audio8 local engine / Doubao routes instead.
+
+For the complete analysis, see [`doc/40-edge-tts-v2-and-compliance.md`](doc/40-edge-tts-v2-and-compliance.md).
 
 ---
 

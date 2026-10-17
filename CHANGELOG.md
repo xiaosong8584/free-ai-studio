@@ -5,6 +5,966 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/)；版本号与 `manifest.json` 严格一致。
 
+## 0.17.18 — 多国语言（8 种 VIP 增量语言包）（2026-10-17）
+
+### Added — 日语 / 韩语 / 俄语 / 阿拉伯语 / 印地语 / 西班牙语 / 法语 / 德语
+
+- 新增 8 个语言包（`src/i18n/<locale>.ts`），每个覆盖 **195 条核心 UI 键**
+  （通用动作 / 通知 / 设置分区名 / 标签栏 / VIP 门禁 / 状态行 / 命令名）。
+  设置 → 界面语言 下拉里选，切换即时生效、无需重启 Obsidian
+- **渐进式翻译**：这 8 个包只翻核心键，其余键走回退链
+  `locale → en-US → zh-CN → key`。回退链里**刻意插了一层 en-US** ——
+  对日语/俄语用户，未翻译项显示英文比显示中文更好懂
+- **阿拉伯语 RTL**：`RTL_LOCALES` 标记 ar-SA，切换后给**插件自己的视图容器**
+  设 `dir="rtl"`（绝不动 `document.body`，避免波及整个 Obsidian 与第三方插件）
+- 语言名在下拉里用**该语言的自称**（日本語 / Español / العربية …），
+  用户是"认得自己的语言"来选的，翻译成中文反而找不到
+
+### Added — VIP 门禁：多语言为 VIP 专属
+
+- `gate.ts` 新增 `VIP_ONLY_LOCALES`（8 项）+ `isLocaleLocked(locale, vipActive)`。
+  **简体中文 / English 永久免费**，非 VIP 的那 8 个下拉项直接 **disabled**，
+  且下方有说明：不是静默失效，是明确告知
+- 三重护栏（与 edge-tts 同款设计）：
+  1. 设置页下拉 disabled；2. `onChange` 里再判一次（防脚本 / 旧配置绕过）；
+  3. **运行闸** `bridge.resolveLocale` —— 挡住"升级前已把 `uiLocale` 存成 VIP 语言"的
+     老配置，回退为跟随 Obsidian 并给出可行动提示
+- 启动顺序调整：`initI18n` 从 `restoreVipState` **之前**挪到**之后** ——
+  VIP 状态未知时没法判定语言能否选用；而命令名只在注册时解析一次，
+  提前解析会让 VIP 用户的语言被误挡回且事后无法补救
+
+### Changed — i18n 核心回退链
+
+`lookup()` / `hasKey()` 从「当前 locale → zh-CN → key」改为
+「当前 locale → **en-US** → zh-CN → key」。对 zh-CN / en-US 用户行为不变
+（两个全量包键集合严格对称），只是给增量包多铺一级台阶。
+
+### Tests — 8 项新增
+
+增量包的三条**专属**失败模式（全量包靠"两侧键集合相等"就能抓，抓不到这些）：
+键拼错（永远取不到）/ 占位符抄错（插值静默失效）/ 整包被误清空（覆盖量下限）。
+外加：回退到 en-US 而非中文、VIP 清单两处引用一致、中英永不被锁、只有阿拉伯语是 RTL。
+
+## 0.17.15 — explainer 成片质量专项优化（2026-10-16）
+
+### Fixed — explainer BGM 旋律化重制（2026-10-16 第三轮）
+
+用户反馈 BGM「没有旋律、像噪音」。根因是 pad 为纯持续长音（无音头、无音高走向，
+人耳归类为机器嗡声），恒定 523 Hz 的 spark 更接近耳鸣音。本次重制声部结构：
+
+- **旋律声部**：C 大调五声音阶（C5–C6）40 槽固定乐句（每槽 0.5s，含休止呼吸），
+  音乐盒音色（基音 + 二次谐波，软起音 + 指数衰减 + 平滑收尾）。五声音阶对四个
+  diatonic 和弦任意搭配都协和，chordOffset 轮转不打架
+- **低音脉冲**：每和弦起点 + 半程各一个根音心跳（0.03s 软起音 + 指数衰减），
+  给节奏支点
+- **spark 移除发声**：恒定 523 Hz 正弦在人声下就是啸叫；字段保留（网格测试不变量
+  仍覆盖），波形不再渲染
+- **声部平衡**：旋律增益 3.0 / 低音 1.6 / pad ×4 分音 0.4→0.25——实测增益 1.1 时
+  旋律音槽与休止槽 RMS 几乎无差（0.106 vs 0.099，被 pad 淹没），声部要站到前台
+  必须显著大于 1
+- **测试**：新增「旋律音阶频率在网格上」与「音槽 RMS 显著高于休止槽」（阈值 1.15，
+  被淹没时实测仅 1.07）两条守卫；无缝循环/确定性/峰值归一化等 18 条原有不变量全过
+- 频谱目视验证：旋律频带（500–1000 Hz）音符攻击点规律分布，循环点（20s/40s）无断裂
+
+### Fixed — explainer 成片去雾 + text 镜恢复（2026-10-16 第二轮）
+
+真实生产 run（27 镜 cine-violet）反馈"主体发毛模糊不清、不时尚"的修复：
+
+- **风格锚点降雾度**：`cine-violet` 锚点文案去掉"柔和体积光，环境氛围"这类
+  生雾词，改为"干净深色背景，克制体积光，高对比低雾度，简洁构图"
+  （zh-CN / en-US 同步；只影响之后新生成的 run，已有静帧不追溯）
+- **text 镜提示词**：`MG_TYPES` 中 `text` 挪至末位并补配额说明，
+  非 text 镜必须含 `heroGlow` 的强引导（渲染侧配套 MgText 金句镜已实现）
+- **测试**：explain-prompts 断言同步（drive→gpu 实体、fx 计数）
+- 渲染侧（外部工程）配套：全局辉光收紧为紧裹 rim light（5 文件 34 处）+
+  `MgSetPiece` 时序按镜头时长缩放（短镜主词/caption 不再缺席），
+  详见该工程 `docs/05` 第 9 节
+
+### Added — explainer MG 动效契约增强（2026-10-16）
+
+对照 skill `/anything2explainer` 补强 remotion-explainer 渲染侧的联动契约更新
+（渲染侧改动在外部工程 `I:\Components\remotion-explainer`，本仓库是契约的源头）：
+
+- **MG 类型**：`MgType` 新增 `rail`（顶部流程轨：2–5 步胶囊 + 进度线，
+  不给 `active` 按镜头前 75% 逐帧推进；步数 <2 清洗时丢弃）
+- **显式运镜**：`MgData` 新增 `cam`（`MgCam`）——`zoom:[from,to]`（clamp 0.7–1.4，
+  超 1.4 描边显粗）+ `panX/panY`（±180）；宽松清洗：写错整项忽略不牵连 mg
+- **语义实体白名单**：`MG_ICONS` 30→43，新增 13 个可点名实体
+  （doc/db/chunk/llm/gpu/rack/person/code/repo/gauge/cluster/timeline/trap），
+  size≥90px 时渲染为有内部结构的语义图元而非通用 path
+- **fx 体系**：`MG_FX` 9→10，新增 `dirBlur`（各向异性方向模糊，入场 14 帧解焦到 0）；
+  提示词 fx 清单 / 用法说明 / 推荐组合同步
+- **幽灵 fx 治理**：`bigNumber`（metric 默认注入）与 `ghostText` 此前在
+  白名单但渲染侧无消费点（模型点名即静默丢弃），本次由渲染侧真正消费
+
+## 0.17.17 — MTV 转免费 + edge-tts 转 VIP（2026-10-17）
+
+**收费范围调整**（`src/vip/gate.ts` 是唯一权威清单，两份 README 的 Disclosure 已同步）：
+
+- **MTV 由 VIP 转免费**：`mtv` 移出 `VIP_ONLY_TABS`，非 VIP 用户可直接看到并使用
+  MTV 面板（ACE-Step 作曲 / 静帧特效成镜 / 本地音轨全部开放）。注：MTV 标签
+  **不在默认可见标签里**，需到设置 → 标签可见性勾选一次（此前被锁，勾不了）
+- **edge-tts 引擎转 VIP**：新增 `VIP_ONLY_TTS_ENGINES` + `isTtsEngineLocked()`
+  （引擎级门禁，不动整个配音 Tab）。非 VIP 的表现是**明确禁用**而非静默失效：
+  - 设置页「默认引擎」与配音面板引擎下拉的 edge 选项 **disabled**（文案带 🔒）
+  - 设置页 **edge 参数组整组禁用**（与 Remotion 等 VIP 分区同款，附锁定提示）
+  - 运行闸：升级前已把默认引擎存成 edge 的非 VIP 用户，生成时被拦下并提示
+    改用豆包（需 Key）或 Audio8（本机部署，免费），不再合成到一半才报错
+- 免费替代路径**必须留着**（测试用例钉死）：`doubao` / `audio8` 对非 VIP 永不被锁
+
+### 说明
+- 两处 i18n 文案同步：设置项 `edge-tts（免费）` → `edge-tts（VIP）`
+- 回归：`test/vip-ad.test.mjs` 新增 2 例（MTV 转免费 / edge-tts 引擎锁 + 免费替代不被锁），
+  25 例全过；`npm test` **1612/1612**
+
+## 0.17.16 — MTV 项目制与成镜双模式 / ZeroGPU 额度兜底 / 成片回验（2026-10-17）
+
+### Added — MTV 项目制：一键创作 + 静帧特效成镜双模式（2026-10-16）
+
+MTV 面板重做为**项目制**（七大分区：项目条 / 一键创作 / 参数 / 成镜模式 /
+生成 / 进度 / 资产），配套四个新模块：
+
+- **一键创作**（`mtvCreate.ts` 纯函数）：创作意图 → LLM → 歌词 / 曲风 / 时长 /
+  质量自动填充。**时长不靠 LLM**——`estimateDurationSec()` 按歌词行数 × 4.2s
+  确定性估算（LLM 数数不可靠）；必填字段缺失整份丢弃并映射到 `mtv.create.bad*`
+  文案；可勾选「创作后自动生成成片」全流程接跑
+- **项目制存储**（`mtvStore.ts`）：`{outputFolder}/mtv/projects/<id>.json`
+  走 `vault.adapter`（中间物料不进 Vault 索引）；参数改动 800ms 防抖落盘、
+  生成前强制 flush；**删项目只删 json，不动资产目录**（歌曲/成片是花钱产物，
+  与短剧 `removeCheckpoint` 对齐）
+- **静帧特效成镜双模式**（`mtvStill.ts`）：面板开关切 I2V / still。still 走本地
+  ffmpeg Ken Burns 推拉，每段按时间窗**真实时长**生成 → 拼接天然等于歌长，
+  顺带消除 I2V 对长歌的十倍慢放问题；参数与 anchor 模块 `kenBurns()` 完全一致
+  （四效果轮转 / zoompan 具体宽高 / 显式 fps=24 / 失败退静态图），各段参数一致
+  → concat 走 `-c copy` 秒级拼接。agnes 视频限流时的降级路径，新项目默认开
+- **资产区分组**（`planAssetGroups` / `mtvAssetSummary` 纯函数）：按歌曲名分组
+  的缩略图卡片墙，逐段关键帧生成完即时出现，每张卡带重出 / 预览 / 删除
+- **进度模型**（`mtvStages.ts` 纯函数）：ETA 预估 / 阶段步骤条 / 计时行
+- **`onPersist` 回调**：每落一个资产（歌/帧/镜头/拼接/成片）回调一次 → 面板
+  即时写 json + 刷资产区，**半途崩溃不丢已花钱的成果**
+
+### Added — ZeroGPU 额度用尽：三道兜底（2026-10-17）
+
+截图反馈「ZeroGPU 额度用尽」。根因是 ACE-Step 走 HuggingFace ZeroGPU，
+匿名请求共享**全网 2 分钟/天**的池子（最易被抢空），且额度按「当日首次 GPU
+使用后 24 小时」重置——长退避无意义。三道防线：
+
+- **① Token 鉴权**：设置页填 `hf_` Token 后请求带 `Authorization: Bearer`，
+  额度记个人账号（免费 5 / PRO 40 分钟 / Team 60），不再抢匿名共享池
+- **② 端点池故障转移**：设置页可填多个 Space 地址（逗号 / 分号 / 换行分隔，
+  非法项忽略，全非法回落内置端点）。失败按 `quota` / `rateLimit` / `waking`
+  分类：额度类直接换端点，**退避刻意做短**（5s / 15s，不睡几十分钟），
+  全失败才抛**可行动错误**（明确指引填 Token / 加端点 / 用本地音轨）
+- **③ 本地音轨直通**：MTV 面板新增「本地音轨」行（`AudioPickerModal` 选 Vault
+  内音频），完全跳过在线作曲直接合成 MV；`readVaultAudio` 只 `readBinary` 拷
+  字节，**不写用户原文件**
+- 8 条纯函数单测（端点解析 / 鉴权头 / 失败归类 / 退避 / 可行动错误）
+
+### Added — 成片回验 renderVerify：参数 / 帧覆盖 / 坏帧（2026-10-17）
+
+「日志成功 ≠ 画面正确」——成片要能被机器校验，新增 `src/core/renderVerify.ts`：
+
+- **三项检查**：① ffprobe 参数回验（fps / 时长 / 可选宽高 / pix_fmt，
+  实测缺失项跳过不误报）；② 帧覆盖断言（场景时间轴 → 帧区间，逐场景抽帧，
+  断言每场景真的进了片）；③ 全片坏帧扫描（`tblend=difference` +
+  `signalstats` YAVG，超阈值段合并成一处）
+- **接入 `renderMedia`**：在 `child.on('close')` 成功分支、确认产物存在之后
+  `resolve` 之前 `await verifyRenderedRender(...)`。口径遵循 doc/43：**回验不
+  阻断主流程**（产物已生成就不因回验翻车），自身异常吞掉，只 trace + Notice
+- **真机 E2E**（`npm run test:verify-live`）：ffmpeg 7.1.1 合成纯蓝 480×270@24
+  成片，再 `drawbox` 插一帧纯黑实测 —— clean 逐帧亮度差峰值 **0 / 0 处坏帧**，
+  corrupt 峰值 **25 / 检出 1 处（帧 23，单帧，1000–1042ms）**；两份真实
+  metadata 已固化成 `test/fixtures`，不依赖运行时 ffmpeg 进 CI
+- **设置项**（新增免费分区「成片回验」）：总开关 + 坏帧扫描单独开关（它是三项
+  里唯一「重」的，全片解码、高运动画面可能误报，允许只关它）+ 期望宽高
+  （填 0 = 跳过该项）
+- **修复**：`detectFrameCorruptions` 原实现把进入帧与「第一个」高差异帧配对，
+  **连续坏帧只报第一帧、后续漏报**；改为扫到连续高差异运行的最后一帧，整段
+  合并成一处
+
+### Fixed — VIP 命令与标签锁不一致 + Disclosure 补全（2026-10-17）
+
+- `main.ts` 把 `open-cover` 注册成免费命令（`addLocalizedCommand`），但
+  `cover` 标签在 `gate.ts` 仍被 `isTabLocked` 锁、且已在 `VIP_ONLY_COMMANDS`
+  里——非 VIP 点命令被静默弹回。改为 `addVipCommand`（弹激活窗，与其它 VIP
+  命令一致）。测试不变量从 `[broll, inkos, canvas]` 扩到全部 **7 个有命令的
+  VIP 标签**，防止再被改坏
+- 两份 README 的 VIP Disclosure「免费面板」枚举漏了 **短剧（drama）** 与
+  **画廊（gallery）**，已补齐；VIP 表 8 行与 `VIP_ONLY_TABS` 逐条核对一致
+  （`gate.ts` 注释要求改收费清单必须同步 README，否则社区目录审查会打回）
+
+### Unreleased
+
+### Added — explainer 分镜多样性 + 自动运镜（2026-10-16 第四轮）
+
+针对真实成片「PPT 翻页感」（主体相机近乎静止）与「元素缺失」（65 镜里
+flow/compare/rail 等结构化类型几乎为 0）两项短板：
+
+- **运镜断链修复（本轮关键）**：`ExplainPanel.buildRemotionProps` 此前透传了
+  `mg` / `transitionIn` 却漏了 `motion` —— 分镜卡上模型选的运镜从未进入渲染
+  props，Remotion 侧永远全默认「缓慢推近」。本次补上 `motionByIndex` 映射与
+  `RemotionShot.motion` 字段，运镜链路真正闭环（渲染侧配套改动见外部工程
+  `docs/05` §10）
+- **提示词自审动作**：分镜提示词（中/英双语）加输出前自审 —— 结构化类型
+  ≥2/10 镜、text/icon 不超 50%，信息密度高的讲解镜强制改成结构化类型
+- **`auditMgDiversity()`**：机器可校验的分镜丰富度审计（mg 类型直方图 /
+  structured 计数 / textIconRatio / warn），把提示词里的配额规则变成可断言数据；
+  +5 单测（压线值 / 无 mg 镜 / 空数组边界）
+- **上述审计已真实接入渲染前质检门（本轮补上的关键一环）**：
+  `explainQc.runExplainerQc` 新增 warn 级 `mgLowDiversity` 检查项。此前它
+  是「写好 + 单测全绿 + 管线零调用」，短板「65 镜里结构化类型几乎为 0」
+  无人拦。现生成完分镜即出预警，消息带结构化类型数、text/icon 占比与类型
+  直方图，并提示「可重生成分镜，或把信息密度高的讲解镜改成结构化类型」。
+  口径：**warn 级不阻断渲染**（守住「只报不改」纪律）；带 mg 的镜头少于 3
+  镜不报（极短片按比例判必然误报）；`total` 只统计带 mg 的镜头，不等于
+  全片镜数。+4 单测（触发 / 不触发 / <3 镜 / 全无 mg + 断言 warn 不改 ok）
+- 渲染侧（外部工程）配套：`buildCamKeys` 跟随卡片 motion 派生主体相机
+  （同向视差，幅度 ≤1.08），真实 run 复渲抽帧 + 差分图确认缩放生效
+
+### 待办
+- **未在 Obsidian 真实界面验证 v2 全链路**（最高优先）：目前只在 CLI 探针
+  （`npm run test:tts-live`）层验证过，Obsidian 内的设置面板 → 生成 → 落盘全链路未跑。
+  这是「保证功能可用、用来项目测试」前最后一块未验证的拼图。
+  （面板层的代次展示逻辑已由 `npm run test:tts-live` 的探测段覆盖，
+  但**按钮点击 → DOM 渲染**这一段仍未跑过。）
+- **三个新面板（B-roll / InkOS / 无限画布）未在 Obsidian 真实界面点击验证**：
+  纯逻辑层有单测、ffmpeg 滤镜链有真跑验证，但「按钮点击 → DOM 渲染 → 落盘」没跑过，
+  建议与上一条合并为一次真机验收。
+- ~~**降级路径无法自动化测试**~~ → **0.17.10 已解决**：
+  `tts.ts` 暴露 `resetGecVersionForTest()` / `currentGecVersion()` /
+  `currentGecDowngradeReason()`，集成测试新增 4 例覆盖代次迁移与复位。
+  这三个接口不依赖 v2 实现，v2 摘除后仍保留（护栏 B2c 会检查别只留一半）。
+- ~~**摘除流程有护栏但没脚本**~~ → **已交付**：`npm run remove:gec-v2`
+  （默认 dry-run，`--execute` 真摘除），自验证见
+  `test/gec-removal-script.test.mjs`（8 例）。**仍待人工的两件事**：
+  ① 保留的 `gec-integration.test.cjs` / `gec-version-preference.test.cjs`
+  里演练后又长出的 v2 时代断言需人工分诊（删 v2 专用例 / 改 v1 期望，
+  脚本只打失败清单不替人改写测试语义）；
+  ② `applyGecVersionPreference('2')` 摘除后语义未定（夹回 `'1'` 还是从
+  settings / i18n / schema 摘掉该选项）。详见 doc/40 §5.5。
+
+---
+
+## 0.17.14 — 墨影 AI 工场移植：剧本质量工程 / B-roll / InkOS 写作台 / 无限画布
+
+**主题**：把桌面端「墨影 AI 工场 v1.0」里插件缺失的能力搬进 Vault。四个模块分两条线落地 ——
+**剧本质量工程**走免费档（挂在文本面板，任何人可用），**B-roll / InkOS / 无限画布**
+走 VIP 档（增量增强，不挤占免费功能）。同版交付 GEC v2 一键摘除工具（见「工程工具」）。
+
+### Added（免费档）
+
+- **文本面板新增 6 个剧本质量模式**（`src/core/scriptQuality.ts`，永久免费）
+  - `剧本体检` / `剧本改写` / `70 集拆分` / `锁定码设计` / `八步分镜` / `首尾帧继承`。
+  - 全部为**去题材化**系统提示词：只保留结构铁律（单镜时长、台词字数、语速闸门），
+    不含任何特定作者风格或角色卡，换题材即用。
+  - 时长/字数/集数上限走**常量单一来源**（`SCRIPT_SHOT_SEC` / `SCRIPT_CHARS_PER_SEC` /
+    `SCRIPT_SPLIT_EPISODES` …），提示词文本由模板插值引用同一批常量；
+    测试反向把数字从提示词里抠出来比对，防止「改了常量忘了改提示词」。
+  - `parseCheckVerdict()` 在模型**没给出判定行**时保守返回 `fix`（不是 `pass`）——
+    宁可让用户再看一遍，也不能把没体检过的剧本当合格。
+  - 文本面板为此加了**第二输入框** `extra`（如「目标集数」「改写方向」），
+    只在需要的模式下显示，不增加其他模式的界面负担。
+
+### Added（VIP 档）
+
+- **B-roll 背景视频**（新 tab `broll`，五阶段幂等流水线）
+  - 素材 → 计划 → 分镜 → 关键帧图 → 片段，任一阶段可单独重跑且结果落盘可续。
+  - **角色三步**（建档 / 定妆 / 定锚）：先立人物卡，再定视觉锚点，最后才生成，
+    避免「每镜一张脸」。
+  - **自动分幕（零模型）**：`src/core/brollAlign.ts` 用 ffmpeg `silencedetect` 切出静音段、
+    取反得人声段，再按字数加权把文稿摊到各段上 —— **不下载任何语音识别模型**。
+  - **抽帧联系表**：`src/core/brollFinish.ts` 拼 ffmpeg 滤镜链一次吐出网格图，
+    用于「一眼看完所有镜」而不必逐个点开视频。
+  - **合成成片**：`concatVideos` → `fitSegment`（音乐**绝不** atempo 提速，
+    画面冻结末帧去迁就音乐长度）→ `burnSubtitle`（保留原音轨）；字幕复用既有纯函数
+    `subtitle.ts`，不新造一套折行逻辑。产物落 `<outputFolder>/broll/`。
+- **InkOS 写作台**（新 tab `inkos`，Vault 原生小说工程）
+  - 章节列表 + 资产库 + AI 续写 + 章节→分镜，全部落 Vault 文件，不依赖外部服务/iframe。
+  - **「送入红果 Pro」**：把章节分镜 JSON 直接交给红果 Pro 七阶段流水线，
+    打通「写 → 拍」两头的断点（此前只能手抄）。
+  - 跨项目资产复用 `collectLibrary` / `libraryToSketch` / `libraryToProAssets`：
+    旧项目里攒的角色/场景/道具能拎出来给新项目用。
+- **无限画布**（新 tab `canvas`，节点图编排）
+  - 文本 / 图片 / 视频三类节点 + 依赖连线 + 并行生成 + 视频节点**首帧反向继承**。
+  - `canLink()` 禁自连 / 重复连 / 悬空连 / **成环**（成环会让依赖永远等不到上游）。
+  - `sanitizeNode()` 对脏数据兜底，坏节点不会让整张图打不开。
+
+### Changed
+
+- 三个新 tab **不在**全新安装的默认可见集合里（默认仍是 6 核心），
+  需到设置页手动开启 —— 避免标题栏一次性塞 15 个按钮。老用户勾选不受影响。
+- i18n 双 catalog（zh-CN / en-US）新增 `text.mode.*` / `text.extra.*` /
+  `broll.*` / `inkos.*` / `canvas.*` / `tab.*`，键集合对称由 `test/i18n.test.mjs` 卡。
+- ** lint 真实缺陷 114 → 80**（新文件贡献的 34 条已清零）：
+  - `BrollPanel` / `CanvasPanel` 的 `document.createElement` 全改 **`activeDocument`** ——
+    popout（弹出窗口）里 `document` 指向主窗口文档，用它建的元素**挂到错误文档、肉眼不可见且不报错**。
+  - 两个新面板的原生 `confirm()` 换成 Obsidian `Modal`，并把 `AnchorPanel` / `DramaProPanel`
+    里各抄一份的确认弹窗**抽成 `src/ui/confirmDialog.ts` 的 `confirmModal()`**（四处漂移 → 一处定义）。
+  - 静态样式直写改 `setCssProps()`；两处浮动 Promise 补 `void`；`JSON.parse` 的 `any` 收敛为 `unknown`。
+- 新增 `test/ui-hygiene-invariant.test.mjs` 把这三条钉成契约：全库禁裸 `document.*`、
+  禁原生 `confirm`、`confirmModal` 只允许定义一次且 `private confirm()` 必须是一行转发。
+
+### Added（工程工具）
+
+- **GEC v2 一键摘除脚本**（`npm run remove:gec-v2`，`scripts/remove-gec-v2.mjs`）：
+  把 doc/40 §5.5 演练出的手动流程（删 5 文件 + `tts.ts` 4 处 + `package.json`
+  三处）固化成一条命令。默认 dry-run 只打印计划；`--execute` 才动手，
+  且 9 条 tts.ts + 2 条 package.json 替换规则必须各自唯一命中，任一漂移
+  即整体放弃（一个字节都不改，防止半摘除态）；git 安全网 + 非 git 仓库
+  拒绝 + `--force` 先建备份；幂等。摘除后自动跑静态扫描 + 护栏 + tsc +
+  npm test，并按后果分级输出「剩余人工事项」。
+- `scripts/check-gec-consistency.mjs` 导出 `runChecks(root)`（不打印不退出），
+  供摘除脚本进程内直调；CLI 行为与退出码不变。
+- 测试 1494 → **1502**（+8，`test/gec-removal-script.test.mjs` 已入测试链）。
+
+### Fixed（护栏）
+
+- 两处**摘除态误报**：B3 只匹配字面量 `'1'`，而 0.17.13 起默认值走
+  `DEFAULT_GEC_VERSION` 常量，会把完好的摘除态误报成 BLOCKER（与 A4 同款坑，
+  改为常量路径 + 字面量两条都认）；B2b 数 `gecVersion` 子串会把按设计保留的
+  `gecVersionLocked` 与探测结果展示字段算成僵尸参数（改为只认合成路径上的
+  三种形态）。护栏自己变噪声后，真问题就会被淹没 —— 这两条都是那个模式。
+- 一处潜在崩溃：`package.json` 不合法时会在 JSON.parse 的 catch 里访问
+  尚未初始化的 `problems`（TDZ ReferenceError），把「报告 JSON 坏了」本身
+  变成第二次崩溃。声明已移到 catch 之前。
+
+### 说明
+
+- 本版同时给 `src/vip/gate.ts` 的两个清单补了三项（tab + 命令双重锁定），
+  并同步了 README 的 VIP Disclosure 表 —— 门禁清单与文档**必须一起改**，否则会漏披露。
+- 未完成事项见上方 `## Unreleased → 待办`。其中**最高优先**仍是
+  「在 Obsidian 真实界面验证 v2 全链路」——目前只在 CLI 探针
+  （`npm run test:tts-live`）层验证过，设置面板 → 生成 → 落盘未跑。
+- 本版新增的三个面板同样**未在 Obsidian 真实界面点击验证过**（纯逻辑层有单测覆盖、
+  ffmpeg 滤镜链有真跑验证），建议与上一条合并为一次验收。
+
+---
+
+## 0.17.13 — edge-tts 协议代次可手动锁定（自动 / v1 / v2）
+
+**主题**：设置 → 配音 → edge-tts 组新增「协议代次」下拉。默认「自动」= 先试 v2、
+被服务端 403 拒绝再退回 v1（原行为不变）；手动锁定某一代后**不再自动降级**。
+
+### Added
+- **设置项「协议代次」（自动 / 锁定 v2 / 锁定 v1）**（`settings.ttsGecVersion`）
+  - 给两类场景：① 想确认某一代到底能不能通 —— 自动降级会把「v2 被拒」变成
+    「静默退 v1 后成功」，结果被掩盖；② v2 有授权风险，想冻结现状只跑 v1。
+  - 锁定后 403 **不降级**，改打一条明确日志告诉用户「你锁的是 v2，它被拒了」，
+    而不是偷偷换成 v1 让人以为锁定生效。
+  - 连通性检测结果会追加 `[已手动锁定 v2]` 徽章 —— 锁定期间若失败，不必翻控制台
+    才知道锁的是哪一代。
+  - 改动**立即生效**，不必重启 Obsidian（这类藏在协议层的配置最容易被误判成「没生效」）。
+- **`tts.ts` 新增 `applyGecVersionPreference` / `isGecVersionLocked`**
+  - `'auto'` 会**复位**回内置默认代次。只解锁不复位的话，用户从 v1 切回「自动」
+    后当前代次还停在 v1，行为与 auto 的语义不符。
+  - 但**已因 403 降级过的**不会顶回 v2 —— 否则连通性检测会
+    「失败 → 重置 v2 → 再失败」地抖。区分「用户主动切 auto」与「已降级态」两种来源。
+- **schema v8 + `migrateV8`**：非法代次一律夹回 `'auto'`。这个值直接决定
+  `generateSecMsGecToken()` 走哪条签名路径，写歪成 `'3'` 既不报类型错也没有分支接，
+  会**静默按 v2 发**——用户以为锁了代次，实际根本没锁。
+
+### Fixed
+- **GEC 一致性护栏 A4 误报**（`scripts/check-gec-consistency.mjs`）
+  - 默认值改由 `DEFAULT_GEC_VERSION` 常量承载后，旧正则
+    `/gecProtocolVersion:\s*GecVersion\s*=\s*'2'/` 把「v2 路线完好」报成 BLOCKER。
+    **护栏自己变成噪声后，真正的 v2 缺失就会被忽略** —— 这是比误报本身更坏的后果。
+    现在两条路径都认（常量路径查常量值 + 初始值引用它；字面量路径仍放行）。
+- **新增护栏 B2d**：`applyGecVersionPreference` 与锁定守卫必须成对存在。
+  只留设置项不接运行时 = 用户改了没反应；只留守卫不留 apply = 守卫永不生效。
+  两者都是「tsc 过、构建过、真机才发现设置是假的」的类型。
+
+### Testing
+- 新增 `test/gec-version-preference.test.cjs`（19 例）：迁移兜底、锁定/解锁语义、
+  降级守卫、锁定态签名确实跟随模块级代次、auto 不顶回已降级态、i18n 中英对称。
+- 为覆盖降级守卫新增测试钩子 `tryGecDowngradeForTest`：守卫藏在 `synthChunk` 的
+  catch 里，触发它要真建 WebSocket 并撞回 403 —— 没网就永远测不到，
+  而这恰恰是「手动锁定会不会被自动降级覆盖」的唯一判定点。
+- 测试 1347 → **1366**（+19），0 fail。
+- **反向破坏验证 6 项全部精准命中**（含「切回 auto 不复位代次」「锁定态仍降级」
+  「migrateV8 不兜底」「启动不应用」「下拉不立即 apply」「复位函数不清锁定态」），
+  还原后全绿。第一轮跑出 1 项 MISSED，据此补了降级守卫用例才达到全命中。
+
+---
+
+## 0.17.12 — 解说词「写太长」被误判为达标（129% 显示绿色 ✓）
+
+**主题**：用户实机截图报「生成分镜有问题」。日志里那行
+`模型返回 435 字 → 39 镜 / 154.3s = 目标 129%` 后面跟着的是
+`→ 时长在容忍范围内（129%）`，且是绿色 `tOk` —— 但 129% 远超 ±15% 容忍带。
+
+### Fixed
+- **时长诊断缺上界盲区：写太长一律报成「在容忍范围内」**（本轮主 bug）
+  - `ExplainPanel.reportDurationDiagnosis` 的 verdict 分支自己写了个**只有下界**的
+    `ratio < 100 - EXPLAIN_NARRATION_DURATION_TOL * 100`，else 一律「在容忍范围内」。
+    数值探针实测：**116% / 120% / 129% / 150% / 200% / 400% 全部落进 else**，
+    越离谱越被说成达标。
+  - 更糟的是**同一屏两套结论**：分支下方的 `judgeNarrationDuration` 判
+    `outOfBand=true` 并弹 Notice（⚠ 偏差 +29%），于是用户同时看到
+    「绿色 ✓ 达标」与「⚠ 报警」，且日志那行还是绿的。
+  - 根因是**判定源被复制成两份**（一份在方法开头有上下界，一份在分支里只有下界）。
+    现在统一由 `judgeNarrationDuration` 判定，日志颜色 / 面板 / Notice 三处全部消费它；
+    分支里不再出现任何基于容差常量的阈值。
+- **新增「原因 D：写太长」分支**：与「原因 B：写太短」分开，二者处置完全相反
+  （B 要补参考料，D 要删字或调大目标片长）。
+  - 文案只陈述**可核对的事实**（写了多少字 / 上限多少 / 超百分之几 / 镜头数是否也超），
+    不编机制。原因见下条——本轮试过两个归因都被实测推翻。
+  - 新增 Notice `explain.durationTooLong`，写太长时不再复用「写太短」的文案
+    （旧文案会引导用户去补内容，而写太长的正确操作是删字）。
+
+### 归因修正：129% 的主因是「字数超预算」，不是「块太碎」
+本轮在写「原因 D」文案时连着错了两次，均被数值探针推翻，结论记在这里防止再犯：
+
+| 假设 | 受控实验 | 结论 |
+|---|---|---|
+| 块太碎（39 块太多） | 字数**恒定 435**，只扫块数 22~42：144.0 / 148.8 / 134.5 / 142.0 / 144.0 s | ❌ 块数与时长**不单调**，39 块比 22 块还短 |
+| 逗号太密（每块塞标点） | 每块 0/1/2/3 逗号 → 172.7 / 164.9 / 157.1 / 149.3 s | ❌ 逗号会被 `STRIP_CHARS` 去掉且不计字数，加逗号反而让块变少、时长**下降** |
+| **字数超预算** | 435 字 ÷ 3.3139 字/秒 = **131.3s** > 120s 目标；且 435 字超 398 字预算上限 **9%** | ✅ 光朗读就已超时，与块数、标点无关 |
+
+> 定则：**归因必须来自受控实验，不能靠「看起来合理」。**
+> 两次错误归因都发生在「只读代码 + 读日志」之后——日志里的 39 镜太显眼，
+> 很容易顺势归因到「块多」，但没做「固定字数、只扫块数」的对照就下结论必然出错。
+
+### Added
+- **分镜缺口诊断**：模型只给部分镜头卡时（原逻辑 `if (drafts.length > 0) break`
+  —— 只要解析出 1 张就收工），现在核对镜头总数，缺口会
+  ① 打印 `got/want/missing + finish_reason` 并触发重试，
+  ② 两轮仍不齐时在**分镜组面板上**以 `is-error` 样式显示「模型只给了 N/M 个镜头的分镜卡」。
+  此前缺口只表现为镜头表里一行行「缺画面提示」，用户无法判断是模型漏镜还是插件坏了。
+- 新增测试 `test/explain-duration-verdict.test.mjs`（9 例，已挂入 `npm test`）：
+  钉死 verdict 三态分流、判定源唯一性、分镜缺口两条路径、i18n 中英对称。
+
+### 清理
+- 删除孤儿 i18n key `explain.retryStoryboard`（已被 `retryStoryboardPartial` 取代，
+  留着会让人以为那条路径还在）。
+
+### 测试
+1338 → **1347**（+9）。0 fail。tsc / 构建 / 产物内容校验通过。
+反向破坏验证 5 项全部精准命中（含「恢复单侧阈值」「用文案前缀反推颜色」
+「恢复 ≥1 张就 break」「面板不显示缺口」「改回块太碎归因」），还原后全绿。
+
+---
+
+## 0.17.11 — 切引擎后解说词音色下拉不跟随（面板收不到设置变更）
+
+**主题**：用户在设置面板把 TTS 引擎切到 edge-tts 后，解说词面板里的音色下拉
+仍列着上一个引擎的音色。配置生效了，**面板没跟上**。
+
+### Fixed
+- **解说词音色下拉不跟随 `settings.ttsProvider`**：面板实例跨 Tab 切换长期存活
+  （`StudioView.attachPanel` 只迁移 DOM、不重建），而 `ttsProvider` 在全局 settings 里，
+  改它**没有任何面板级通知**。`rebuildVoiceOptions()` 只在 `display()` 与载入档案时调用，
+  `switchTab` 走的却是 `attachPanel` —— **不调 `render()`**，面板无从重算下拉。
+  - 表现最糟的一种是 audio8 → edge：下拉里留着 `zh-female-qn-qingse` 这类 audio8 音色名，
+    而 `synthVoice()` 在 edge 分支**原样返回** `this.voice`（不做归一化），
+    用户真选了就会合成失败。
+  - 修复：`PanelSlot` 新增 `onShow` 钩子，`attachPanel` 在复用槽位时调用；
+    `ExplainPanel` 记住下拉是按哪个引擎渲染的，漂移就只重建这一个下拉（**不重建整个面板**）。
+  - 方法幂等：引擎没变时直接返回，用户反复切 Tab 不触发任何重渲染；
+    首帧（`voiceRenderedFor === ''`）豁免判定，避免一次无谓重建。
+  - `createSlot` 里局部声明的 `onShow` 必须 `return` 出去 —— 漏了局部钩子永远不存在，
+    且类型上不会报错（可选属性）。
+
+### Changed
+- `doc/08-ui-components.md` 新增「面板收不到设置变更 —— `onShow` 挂载自检」：
+  含槽位缓存的必然后果、真实案例、两种修法（A 设置变更事件 / B 挂载自检）的取舍，
+  以及排查口诀（grep 面板里 `plugin.settings.<字段>` 且该字段在设置页可改）。
+- 排查过同类面板：`AnchorPanel` 恒用 edge 音色表（不按引擎分支），
+  `WandancerPanel` / `PipelinePanel` 读的设置字段无对应控件 → **只有本处需补**。
+
+### Added
+- `test/explain-voice-engine-sync.test.mjs`（5 例，纯 UI 无 DOM环境，
+  沿用 `explain-panel-ui.test.mjs` 的源码结构断言）：
+  钩子声明 + 挂载时无条件调用（且在槽位创建分支之外）+ `createSlot` 透传 +
+  漂移判定读全局 settings + 幂等守卫顺序。
+  **已做反向验证**：分别破坏「移除 onShow 调用」「return 漏字段」「移除幂等守卫」，
+  三次都精确让对应用例变红，证明不是空转。
+
+### 验证
+- tsc 0 错 · 全量 **1338 pass / 0 fail**（+5）· 生产构建 `free-ai-studio@0.17.11`
+- 护栏自洽 · 反向破坏测试三次均精准命中（not ok 1 / 2 / 4），还原后 5/5
+
+---
+
+## 0.17.10 — Edge-TTS 协议代次可视化（降级不再静默）
+
+**主题**：0.17.9 把 v2 签名接上了，但**代次是不可见的**——握手 403 会把
+`gecProtocolVersion` 从 `'2'` 降到 `'1'` 且本次会话不可逆，而设置面板对此毫无提示。
+本版让「当前在用哪一代」成为面板上看得见的事实。
+
+### Fixed
+- **「v2 被服务端拒绝」与「网络不通」在界面上完全一样**：
+  `probeEdgeTts` 原本只返回「直连正常，返回 34 KB 音频」，不报代次。
+  于是最常见的真实故障（v2 被拒 → 降级 v1 → v1 也失败）显示为
+  「❌ 合成失败」，用户只能反复换代理去试，方向从一开始就是错的。
+  现在成功/ 失败两条路径都回报 `gecVersion`，降级时附
+  「这不是网络问题，重试代理无效；重启 Obsidian 可回到 v2」的明确指引。
+- **探测的环境短路分支漏字段**：给返回结构加 `gecVersion` 时只改了 try/catch，
+  漏了 `if (!hasNodeRuntime())` 的提前 return —— 移动端点检测唯独缺代次，
+  而它恰恰最需要（移动端不发握手，代次来自上次降级状态）。真机跑一次才发现。
+- **护栏的接口存在性检查静默失效**：新增的「三个可观测性接口是否齐全」用
+  `countOf(fn) === 0` 判存在性，而 `probeEdgeTts` 里的调用点也被计入子串，
+  **定义被删后计数仍非零** —— 检查在它最该生效的场景下完全不报。
+  改为匹配函数定义后，构造的反例能正确报出。
+
+### Added
+- **`currentGecVersion()` / `currentGecDowngradeReason()`**（`tts.ts`）：
+  读当前代次与降级原因。`gecProtocolVersion` 是 `export let`，
+  打包成 CJS 后外部拿到的只是绑定、看不到变化，必须走函数。
+- **`resetGecVersionForTest(version?)`**：测试用复位口。
+  **顺带解除了「降级路径无法自动化测试」的历史限制** ——此前只能靠真机撞 403
+  才能走到 `synthChunk` 的降级分支。
+- **`TtsProbeResult.gecVersion` / `.gecDowngradedFrom`**，面板据此显示
+  `✅ 直连正常，返回 34 KB 音频（约 5.8 秒） · 协议 v2`，
+  降级时额外挂 `[已降级至协议 v1]` 徽标。
+- **集成测试 +4 例**（13 → 17）：代次迁移、复位有效性、
+  降级后 token 形态、URL 前缀跟随。
+- **`test/edge-tts-live.mjs` 增探测段**：面板走的是 `probeEdgeTts` 而非
+  `synthesizeEdgeTts`，这条路径只有真机能验（集成测试无网络，跑不到握手）。
+  现在合成与探测两条路径一次跑完。
+- **护栏 B2c 检查**：三个可观测性接口「别只留一半」。
+  它们**不依赖 v2 实现**，摘除后应保留 ——
+  只留 getter 不留复位口则集成测试无法复位，只留复位口不留 getter 则面板无从展示。
+
+### Changed
+- 护栏问题分级提示行补上 §5.6 索引。
+- `doc/40-edge-tts-v2-and-compliance.md` 新增 §5.6「代次可观测性」
+  （含「为什么不加 v1/v2 下拉」的三条理由）与 §6.9 / §6.10 两条新坑。
+- 踩坑记录 9 条 → **11 条**。
+
+### 不变的设计决定
+设置下拉**仍然只有 `edge` / `doubao` / `audio8` 三项**，不加 v1/v2 选项：
+那是**引擎路由**，与协议代次正交；且v1 已被微软拒绝，
+给一个必然失败的选项没有意义。详见 `doc/40` §5.6。
+
+### 验证
+- tsc 0 错 · 全量 **1333 pass / 0 fail**（+4）· 生产构建 `free-ai-studio@0.17.10`
+- 护栏双态实测：v2 存在态自洽；构造的摘除态反例报出 2 BLOCKER + 6 WARN
+  （新增的第 6 处即「缺 `currentGecVersion` 定义」）
+- 真机 `npm run test:tts-live`：合成 34848 字节 MP3（`ff f3` 帧同步 ✓），
+  探测 `ok: true` / `gecVersion: 2` / 无降级
+- i18n 三条新文案经真实 `registerMessages` + `setLocale` 插值验证，中英文均正确
+
+---
+
+## 0.17.9 — Edge-TTS 协议 v2 支持（恢复免费配音）
+
+**主题**：修复 2026-10-14 发现的「协议代际过期」导致的全线 403。
+v2 签名已实现并真机验证，v1 保留为降级路径。
+
+### Fixed
+- **edge-tts 免费配音全线 403**：微软于 2026-10-13 把 `Sec-MS-GEC-Version` 前缀
+  从 `1-` 升到 `2-`，token 格式同步改为 `CS64-SHA256` 双段。本插件实现 v2 签名后
+  真机合成恢复（34848 字节 MP3，帧同步正确）。**注意现象与微软宕机完全一样**
+  （WS 403 + body 为空）但处置相反，详见 `doc/20-tts.md` FAQ。
+
+### Added
+- **`src/core/ttsGecV2.ts`**：v2 签名实现（约 200 行，零外部依赖、零 obsidian 依赖）。
+  **隔离成单文件是有意的** —— v2 的魔数取自 LGPLv3 上游，属派生作品；
+  隔离后「摘掉 edge 路线」的成本 = 删 5 个文件 + 改 `tts.ts` 4 处 + 清 `package.json` 3 处
+  （**已实测演练**，非推演，见 `doc/40` §5.5）。
+  文件头标 `@license LGPL-3.0-or-later` 与上游归属。
+- **握手失败自动降级**：`synthChunk` 先走当前代次，403 时切 v1 重试一次。
+  将来微软出 `3-` 前缀时不必发版（前提是 token 算法未变）。
+- **`generateSecMsGecToken()`** 运行时唯一入口 + `gecProtocolVersion` 开关。
+  要整体退回 v1：把该常量改回 `'1'`。
+- **`test/gec-v2-parity.test.mjs`**（10 例）：与 Python `edge-tts==7.3.1`
+  **逐位对拍**（8 个时间戳 × token 全等+ SHA/CS64 分段全等）+ 常量表逐个比对 +
+  窗口恒定性 + 形态断言。
+- **`test/extract-gec-v2-consts.py`**：从上游 `drm.py` 直接导出全部魔数，
+  杜绝「手工抄常数漏一位」这类**静默失败**。
+- **`test/gen-gec-v2-golden.py`** + `npm run test:gec-v2-golden`：重新生成对拍基准。
+  `.tmp` 文件不入库时测试自动退回**内置基准**，CI / 干净克隆零依赖可跑。
+- **`debugV2()`**：分段导出 salt 派生 / 压缩 / CS64 三段中间量。
+  三段出错的表现都是 403，只能靠它区分。
+
+### Changed
+- `buildWssUrl()` 增加 `version` 参数；`generateSecMsGec` 标注 `@deprecated`
+  （保留原因：v2 若因授权被摘除，这是唯一回退路径）。
+- `test/edge-tts-live.mjs` 的诊断输出改打**实际使用的代次与 v2 token**。
+  原先打的是 v1 样例（单段 32 hex），看着「有输出」但与真实请求无关，
+  排查时会指向错误方向。
+- `README` / `README-cn` 的 Third-party Notices 补上 v2 的派生作品声明。
+
+### 已知边界
+- 上游 `edge_tts` 的 `_sha256_rounds` 把 64 轮手工展开成「8 轮一组」，
+  本实现用标准 64 轮循环 —— 语义等价、代码形态不同。
+- v2 的 CS64 与魔改 SHA-256 都**不能靠协议描述自行实现**（无推导路径），
+  必须以 `edge-tts` 为参考，故认定为 LGPLv3 派生作品。
+
+### Added
+- **`scripts/check-gec-consistency.mjs` + `npm run check:gec`**：v2 摘除一致性护栏，
+  挂在 `npm test` 最前面。按 `ttsGecV2.ts` 是否存在走两条分支：v2 在则校验引用完整性
+  （import / 分派 / 默认代次 / 降级函数是否被调用），v2 走了则校验无残余引用
+  （`package.json` 悬空引用 / 死代码 / 僵尸参数）。
+  **问题分两级**——`⛔ BLOCKER`（会让测试崩或功能静默失效）与
+  `⚠ WARN`（死代码、悬空手动脚本），初版全标成「硬阻塞」是**自造误报**
+  （Python 脚本不在 `npm test` 链里，删掉并不会崩）。
+  护栏自身已用构造的摘除态目录实测：能报出2 BLOCKER + 5 WARN。
+- **`test/gec-integration.test.cjs`**（13 例）：补齐**集成层**覆盖盲区。
+  原先 10 个用例全打在纯算法上，而摘除演练证明真正易错的是 `tts.ts` 的胶水逻辑 ——
+  v1/v2 分派写反、`buildWssUrl` 前缀没跟着代次变、降级函数只有定义没调用，
+  这些**全都不报错**（tsc 过、算法单测过、真机才403）。
+  现覆盖：分派形态、前缀拼接、URL 组装、clock skew 跨/不跨窗口语义、v1 回退入口。
+
+### Fixed
+- **`ttsGecV2.ts` 两处冗余乘数 `* 1`**（CS64 链 A/B）：值上 `x * 1 === x`，
+  token 完全正确，但**形状与上游不符** —— 上游 `drm.py` 里此处根本没有额外乘数。
+  看似无害，实则掩盖了「是否抄漏常数」这个本该一眼可见的问题。已改为与上游同形。
+- **四处自相矛盾的注释**（`expandSchedule` / `smallSigma0` / `v2Digest` /
+  `deriveInitialState`）：注释描述的是**被否决的错误写法**，或与自己下面的代码打架。
+  这类注释不改结果，但会主动把后续改动引向错误方向—— 已在 `doc/40` §6.8 记录。
+
+### 验证
+- tsc 0 错 · 全量 **1329 pass / 0 fail**（新增 13）· 生产构建 OK
+- 与 Python 逐位对拍 **10/10**；review 中另现场对拍 2 个时戳，与上游 7.3.1 **逐位全等**
+  （`63DEFE91AD9FDACC-…` / `2CFA218E361E5B1A-…`）
+- **真机合成成功**：34848 字节 MP3（`npm run test:tts-live`），GEC 代次 2
+- 摘除流程实测演练：真删文件 + 改调用点，tsc 仍 0 错，但发现
+  **`package.json` 的 `test` 链残留 2 处悬空引用会让 `npm test` 直接
+  `MODULE_NOT_FOUND` 崩掉**、另有 4 处死代码/僵尸参数静默通过。
+  完整残留清单见 `doc/40` §5.5 —— 现已固化为自动护栏（§5.6），不必再靠人记
+- 顺手修掉 `tts.ts` 两处 JSDoc 残留（重复注释块、常量删除后悬空的注释）
+- 订正 `doc/40` 交叉引用错误：踩坑节号从「第九节」改回「第六节」
+
+### 排查证据存档（2026-10-14，v2 实施前的调研阶段）
+
+> 以下是**定位协议升代时的原始证据**，保留备查。结论已落地到 0.17.9。
+
+**当时的主题**：排查「edge-tts 全线 403」时发现**协议已升代**，插件 v1 实现已被
+微软服务端拒绝。该阶段只做调研留档 + 合规声明，尚未修改 TTS 代码。
+
+**排查结论（重要）**
+- **不是宕机**：同机同时段对照实验 —— 官方 `edge-tts==7.2.8`（v1）403，
+  `==7.3.1`（v2）成功产出 23328 字节 mp3。一次排除宕机 / 本地网络 / 环境问题。
+- **不是改个版本号能修的**：7 组握手矩阵实验（含「真 v2 token 配 `1-` 前缀」
+  「真 CS64 配假 SHA」等）**全 403** → 前缀代号与 token 格式是两个独立的必检项，
+  且 CS64 与 SHA 两半都校验。
+- **与 2026-10-12 宕机现象完全一样**（WS 403 + body 为空）但**处置相反**：
+  前者等恢复，后者改代码。已在 `doc/20-tts.md` FAQ 加区分方法。
+- 移植难度约 180 行 TS，但 v2 的 SHA-256 **不是标准算法**（前 7 字节当 salt 派生
+  自定义 IV + 轮常数魔改），Node 内置 `crypto.createHash` 用不了。
+
+**该阶段新增的文档（已全部落地）**
+- **`doc/40-edge-tts-v2-and-compliance.md`**（新建）：v1→v2 差异、握手矩阵、
+  证据链、移植要点，以及 MIT 插件的 LGPL 污染判定（三条路径）。
+- **`README.md` / `README-cn.md`** 新增「第三方声明 / Third-party Notices」小节：
+  edge-tts 为 LGPLv3 + 本插件 v1 为独立实现的归属声明 +
+  **未公开端点无 SLA、商业使用需自行评估**的免责说明。
+- **`doc/20-tts.md` §2.8「合规与风险」**（新建 5 个子节）、§2.4 补 GEC 前缀
+  （`1-`→`2-`）与失效状态、FAQ 补「2026-10-14 起全线 403 是宕机吗」与
+  「edge-tts 有法律风险吗」两条、`doc/README.md` 索引 + 快导行。
+
+**澄清（避免误判，此结论依然成立）**
+- 现有 v1 实现**是干净的**：`generateSecMsGec` 只用 Node 内置 `crypto`，ticks 算式由
+  微软协议规定，未取用上游代码；`src/core/tts.ts` 注释里的「照 rany2/edge-tts 实现」
+  是**归属披露**而非抄袭。污染风险只在移植 v2 token 算法时出现——
+  **该风险在 0.17.9 中已实际发生**，处置方式见 §5.5 摘除演练。
+
+## 0.17.8 — review 收口：失败清单去重 + 中文本地路径
+
+**主题**：上一版发布后做一轮「报过但没修」的 review，抓出两个真缺陷——一个是我自己在 0.17.7
+引入的、一个是一直潜伏在离线调研入口的。
+
+### Fixed
+- **失败条目翻倍**（0.17.7 引入）：加了 `onAudioFailed` 逐镜推送后，整批 `renderShotAudio()`
+  resolve 的 `this.assetFailures.push(...audio.failures)` 把同一条失败**再推一遍** → 失败清单
+  翻倍、警告条数虚高。抽出 `mergeFailures(newOnes)` 按 `(stage, index)` 去重，把 6 个写入点收拢成
+  「1 处定义 + 5 处调用 + 1 处重置」；判据带 stage（S3 出图失败 ≠ S3 配音失败），用 `Set` 记键。
+- **中文本地路径识别不到，深度调研被静默跳过**：`LOCAL_RE` 用 `\w`（只含 `[A-Za-z0-9_]`，不含
+  任何非 ASCII），`I:\...\墨影AI工场V1.0.0\...` 整段匹配失败 → `detectSources` 返回空 → 面板弹
+  「没有识别到可抓取链接」。改为 `[\p{L}\p{N}_./\\-]` + `u` flag。原本只有「函数存在」的结构断言、
+  **零行为断言**，所以一直没人发现。
+
+### Changed
+- 补 5 条本地路径行为用例（中文目录 / Unix 与 `~/` 形态 / URL 不误判 / 本地压过远程 /
+  owner 不一致时不去重）+ 2 条失败去重契约用例（去重键必须含 stage、整批回填不允许裸 `push(...)`）。
+- 订正 `doc/34` 一处过期记录：调研 clone 已不在 `Temp/`（0.17.6 迁到 vault 共享缓存），
+  但新缓存同样无回收策略。
+
+中英各 **2060 键**（零增删）；测试 **1295→1302**（+7 行为与契约用例）全绿；
+lint 与 HEAD 持平 **90**（中途因正则多余转义 `\/` 涨到 91，已修回）。
+
+## 0.17.7 — 解说片：配音文件列表逐镜增量刷新
+
+**主题**：出图早就逐镜点亮缩略图了，配音却还在等整批跑完才把列表一次填进来——用户看到
+「配音进度 9/9」，下面「配音文件」却一直是 `—`。同一份 UI 里两种刷新语义。
+
+### Changed
+- **配音逐镜回调**：`RenderAudioOpts` 新增 `onAudioDone(asset)` / `onAudioFailed(failure)`，
+  与出图的 `onFrameDone` 同构。worker 三个终态各触发一次（成功推 asset；缺文本早退与 catch
+  各推一条 failure）；`bump()` 仍只在「缺文本早退」+「finally」两处，进度分母口径不变。
+- **配音列表抽出独立刷新**：`renderAssetLists()` 里的配音块抽成 `renderAudioList()`，新增
+  `absorbAudioAsset()`（按 index upsert + 排序）/ `absorbAudioFailure()`（去重判据带
+  `stage === 'audio'`，`assetFailures` 里混着出图阶段的失败）；「自动跑完」与「分步」两处
+  `renderShotAudio` 调用点都接上回调。只刷配音这一块——字幕 / BGM / 清单在配音阶段不变，
+  逐镜重建它们只会闪一下。
+- **删掉重复的配音进度行**：`renderAssetProgress()` 每调用一次就往 `assetAudioEl` **追加**
+  一条进度行（带 `data-asset-progress`），而配音进度本来就有 `audioProgressEl` 一条，且两者
+  都只在配音阶段可见。原先每帧只调一次没人注意，改成逐镜回调后会堆出 9 条。直接删掉（连同
+  它唯一的调用点、以及只被它用的 `currentStage()`），配音进度只留 `audioProgressEl` 一条。
+
+中英各 **2060 键**（零增删）；测试 **1286→1295**（+9 逐镜增量回归钉）全绿；
+lint **92→90**（删掉的方法自带 2 条 `obsidianmd/no-static-styles-assignment`，无新增）。
+
+## 0.17.6 — 解说片：静帧缩略并入「4 · 生成素材」，收口 0.17.3 的半迁移
+
+**主题**：一次做完一半的迁移收口。0.17.3 把「出图进度」从分镜组搬到素材组（理由是「点
+『生成素材』看到分镜组亮起，会误以为分镜被重跑」），但**产物**——静帧缩略图——留在了分镜组。
+结果用户点一次按钮要开两个分组才能对上产物：进度条亮在 4、缩略图躺在 3。本版把缩略区搬到
+出图进度正下方，进度与产物同组同序。
+
+### Changed
+- **静帧缩略区搬到素材组**：`thumbsEl` 由 `g3Body` 移到 `g4Body`，紧接 `framesProgressEl`
+  下方。素材组顺序变为 生成素材按钮 → 出图进度 → **静帧缩略** → 配音进度 → 配音文件 → BGM
+  → 字幕 → 清单。分镜组只剩分镜自己的产物：出镜进度行 + 镜头表。
+- **素材组标题补上「图」**：原「4 · 生成素材（配音 / BGM / 字幕 / 清单）」没提图，
+  但组内按钮文案是「生成素材（图/音/字幕）」——分组标题、按钮文案、产物归属三处口径不一致，
+  统一为「（图 / 配音 / BGM / 字幕 / 清单）」。
+- **交叉引用保留**：每张缩略图仍带 `S1/S2…` 标题，点击走 `openShotCard()` 弹大图 +
+  实际提示词 + 单镜重出；代价只是多一次点击换来看镜头表与静帧的相邻对照。
+- **过期编号注释清理**：`styles.css` 里四处「分组 0/1/2/3」是旧的 0-indexed 说法，现按内容命名。
+
+中英各 **2060 键**（本轮零增删，仅改标题键的值）；测试 **1286/1286** 全绿；
+lint 与 HEAD 基线持平（15 errors / 1 warning，全为既有）。
+
+## 0.17.5 — ffmpeg 配置重做 + TTS 三引擎折叠分组 + Audio8 TN 协议名转中文全称
+
+**主题**：三件事一起。① ffmpeg 面板「每次重载都要重新应用路径」其实是**错觉**——路径一直
+保存在 `settings.ffmpegPath`，但探测结果是**内存态缓存**，重载后必然为空，状态条因此恒显示
+「未找到」。本版改为**打开面板即自动探测**，并把「扫描全部安装 → 挑一个 → 应用」作为主流程，
+两个输入框直接显示 ffmpeg 包的**完整安装路径**。② 「检测当前配置」与「扫描全部安装」职责重叠，
+删掉前者。③ TTS 设置页 20 多个输入框一屏糊满，拆成 edge-tts / 豆包 / Audio8 三个**默认折叠**
+的分组。另含 Audio8 TN 的协议名处理。
+
+### Changed
+- **ffmpeg 探测结果落成完整路径**：新增 `resolveCommandFullpath()`，PATH 上的裸命令名（`ffmpeg`）
+  按 PATH 逐目录 `existsSync` 解析成绝对路径（win32 补 `.exe`），解析不到原样返回。UI 与日志
+  直接看到真实安装位置，不再只显示一个裸名。
+- **打开 ffmpeg 面板即自动探测**（`refreshFfmpegStatus`）：缓存命中直接回填、不起子进程；
+  未命中则按已保存路径探测一次，路径有变化就 `save()` 并 Notice。是否回填由 `writeBack` 控制——
+  自动探测回填，**手动改路径后的校验不回填**（否则用户没打完字就被另一条路径覆盖）。
+- **删掉「检测当前配置」按钮**：职责并入「打开即探测」+「手改路径后 900ms 防抖自动校验」
+  （`verifyFfmpegDebounced`；`display()` 时 `clearTimeout`，防旧节点起子进程）。
+- **应用扫描结果不再整页重建**：`applyFfmpegPick` 改为原地 `syncFfmpegInputs()` 刷新两个输入框，
+  保住滚动位置与其他分区展开状态；`textSetting()` 返回 `TextComponent | null` 以支持原地 `setValue`。
+- **TTS 三引擎分组折叠**：`tts()` 只留跨引擎通用的「默认引擎」与「配音子目录」，edge-tts /
+  豆包 Seed-Audio / Audio8 各自收进 `section(..., open: false)` 折叠组；Audio8 组保留
+  `canUseFfmpeg` 门禁（依赖本机 Node 运行时，移动端整个分组不显示）。
+- **Audio8 TN 协议名转中文全称**：`http` → 超文本传输协议、`https` → 超文本传输安全协议、
+  `ftp` → 文件传输协议、`www` → 万维网；正文里的「http协议」联动剥掉冗余的「协议」二字；
+  `urlToSpoken` 剥掉 URL 首部的 `www.`。套件 `tts.py` 同口径镜像。
+
+中英各 **2060 键**（+7 新分组键、-3 废弃键，订正此前文档记的 2058）；测试 **1283→1286**
+（+3 为协议名 TN 用例），全绿。
+
+## 0.17.4 — Audio8 TN 修正：孤立 scheme 不再静默（保留协议名）
+
+**主题**：0.17.3 的「孤立 scheme 剥离」把裸 `http://` **整段删除**，导致用户写
+`http://   这是http协议` 时开头的「http」完全不读（静默）。本版改为**保留协议名、只剥 `://` 分隔符**
+（`http://   这是http协议` → `http 这是http协议`），既消除 `://` 被逐符号念的高频噪声，又让协议名正常读出。
+
+### Fixed
+- `STANDALONE_SCHEME_RE` 替换逻辑由 `''` 改为保留协议名（`http`/`https`/`ftp`）+ 剥 `://`
+  （`m.replace(/:\/\//g, '')`）。真实整 URL 仍由 `URL_RE` 口播化，不受影响。
+- 配套：套件 `tts.py` 同步（`_STANDALONE_SCHEME.sub(lambda m: m.group(0).replace("://", "").rstrip("."))`），双端同口径。
+  CLI 实跑 `http://   这是http协议` → `http 这是http协议`，模型读出「http」。
+- 单测期望同步（孤立 scheme 用例由「整段删除」改为「保留协议名」）。
+
+中英各 2058 键不变；测试总数不变（1283）。
+
+## 0.17.3 — Audio8 TN 强化：孤立 scheme 剥离 + 超长拉丁串切块
+
+**主题**：0.17.2 修好了 URL 口播化与预算公式，但用户实测仍有两类残留让 Audio8 读英文/混合文本
+「非常奇怪」：① 裸 `http://` 后面没跟 URL 内容（只接空格/标点）原样进模型、被逐符号念；
+② `datawhalechina` 这类 14 字母连写品牌词被模型逐字母念且中途 stall。套件 CLI `tts.py` 先补了
+TN 这两步并实跑验证（分片输入 `hiss_frac` 0.491→0.106，NOISY→CLEAN），本版把**同口径**的两步
+补进插件 `normalizeAudio8Text`，让解释器脚本里的长英文词同样不再 stall。
+
+### Fixed
+
+- **孤立 scheme 前缀剥离**（`STANDALONE_SCHEME_RE`，0.17.3 新增）：裸 `http://` / `ftp://` 后面
+  紧跟空格或标点（非真实 URL）时，原样进模型会被逐符号念（`hiss_frac` 飙到 0.491）。
+  在 URL 口播化**之前**剥离；lookahead 保证真实整 URL（如 `https://github.com/x`）仍由 `URL_RE`
+  正常口播化、不被误剥。
+- **超长连写拉丁串切块**（`LONG_LATIN_RE = /[A-Za-z]{9,}/` + `chunkLongLatin`，0.17.3 新增）：
+  模型对 ≥9 字母连写串（如 `datawhalechina`=14）逐字母念且中途 stall。按 4 字切块插空格
+  （`datawhalechina` → `data whal echi na`），把 stall 挪到词边界。阈值取 **≥9**（而非 8）以不误伤
+  `cookbook`(8) 这类常见词——`datawhale`(9) 因 9≥9 仍切，验证 55/55 单测通过。
+- 配套：套件 `tts.py` 的 CLI 同步镜像这两步（`_STANDALONE_SCHEME` / `_chunk_long_latin`，maxlen=8），
+  双端同口径；CLI 实跑同 seed 对照，分片输入 hiss 0.491→0.106、整句 BORDERLINE→CLEAN。
+
+测试 1281→1283（TN 两步各加 1 个用例）。中英各 2058 键不变。
+
+## 0.17.2 — Audio8 合成：预算公式重写 + TN 预处理 + 字幕竖线泄漏修复
+
+**主题**：用户报障「Audio8 读 URL、数字发音非常奇怪，会中断」。两轮合成探针 + 一段成品
+解说片逐段扫描后，定位到**三个叠加问题**：预算公式对非中文严重低估（软件 bug）、URL 与
+连字符词让模型坍塌成静音（模型分布外，软件侧用 TN 缓解）、解说词分隔符 `|` 漏进 TTS
+（软件 bug，且在成片字幕里可见）。
+
+### Fixed
+
+- **token 预算公式按字符重写**（`computeAudio8Budget`）：旧公式「CJK×9 + 英文词×5 + 16」
+  对非中文低估 2–4 倍——46 字符的 URL 只拿到 46 token，实测需要 93；口播形式 97 → 实测 202。
+  根因是模型对非中文**逐字母/逐符号念**，词内字符数不封顶，而旧公式完全不给符号计价
+  （`://` `/` `-` `.` 白念但照样烧 token）。新公式 **CJK×9 + 数字×9 + 拉丁字母×4 +
+  ASCII 符号×4 + 16**：数字单独按 9 计价，因为模型把「11」念成「十一」（18 帧，与两个
+  汉字同价），按词算只有 5 token，手机号 13800138000 会被砍成半句。
+- **新增 TN 预处理层**（`normalizeAudio8Text`，分片前应用）：Audio8-0.1B 训练数据
+  （套件 `docs/0.1B/data.json` 全部 70 条样本）**0 条含 URL**，模型遇到分布外文本不报错，
+  而是坍塌成静音码且不吐 EOS，把剩余预算全烧成死寂——实测「这套教程叫jev-cookbook」
+  静音率 0.498、1.9s 之后 1.88s 死寂。四步规范化：URL/邮箱 → 口播形式
+  （`github dot com slash jev dash cookbook`）、字母间连字符 → 空格、字幕分隔符 `|` → 逗号、
+  折叠重复标点。同一 seed 前后对照：URL 原样静音率 0.510 / 9 处 gap → 口播形式 0.255 / 1 处；
+  `jev-cookbook` 0.498 死寂 → `jev cookbook` 0.158 无 gap。
+- **解说词分隔符 `|` 漏进 TTS**（`mergeShortShots` 用 `|` 连接合并镜头，`renderShotAudio`
+  把合并后的 text 原样送合成）：模型训练数据里没有 `|`，每处产生 0.3–0.66s 停顿——纯中文句
+  「这就像让厨师直接给你一碗汤|你却只想尝咸淡」仅因竖线就在 3.24s 处卡停 0.52s，成品片
+  4/4 精确复现。新增 `flattenCueText()` 在送 TTS 前压平；字幕渲染同步修复——
+  **成片 ASS 的 Dialogue 行此前会显示字面竖线**（该片 20 行中招）。
+- 预算给足后 URL 不再硬切：`frames == budget` 且 `tail_rms > 0.5` 的截断签名全部消失，
+  探针所有用例自然 EOS（手机号 56/115、英文 68/108、URL 口播 228/292）。
+
+测试 1270→1281；中英各 **2058 键**对称（0.17.1 文档记的 2057 比实测少一个，本版订正）。
+
+## 0.17.1 — Audio8 服务：真机联调修复
+
+**主题**：0.17.0 的服务管理器是照着套件脚本的**源码**写的，但从没在本机跑通过一次。
+本版做真机联调，把「看起来对」和「真的能跑」之间的差距补上。
+
+### Fixed
+
+- **Start 死锁：陈旧 `.service.pid` 会让服务永远起不来**（真机联调发现，用户无法自愈）。
+  `start_server.ps1` 的幂等检查是 `if (Get-Process -Id $existingId) { exit 0 }`，
+  **只验 PID 存活性、从不看端口**。异常关机留下陈旧 pidFile 后，Windows 重启会把那个数字
+  重新分配给任意无关进程 → 点 Start 时脚本 `exit 0` 说「已在运行」但服务根本没起 →
+  插件二次 health 复检失败 → **用户再点一百次都一样**，因为 pidFile 从没被清过。
+  现在 Start 前凡是「health 不通但 pidFile 还在」就先清掉它（`clearStaleAudio8PidFile`，
+  删的是**下钻后脚本所在那层**，删错层等于没删）。
+- **Stop 谎报「已停止」**：服务在运行但**没有** pidFile 时（用户手动 `run_server.ps1` /
+  `python -m uvicorn` 拉起来的很常见），`stop_server.ps1` 第 5-8 行遇到无 pidFile 直接
+  `exit 0` 说已停止。原来插件只报一句没信息量的「停止失败」，现在区分出
+  `audio8Service.unmanaged`，明确告诉用户「不是套件脚本启动的，插件无法自动停止，请手动结束进程」。
+- **监听地址与连接地址不一致**：脚本缺省只监听 `127.0.0.1`，而插件连的是用户填的 baseUrl。
+  用户把 baseUrl 填成 `http://localhost:8024` 时，Windows 上 `localhost` 优先解析到 `::1`，
+  脚本却只听 IPv4 → 「脚本说启动成功、插件永远连不上」。
+  新增 `parseAudio8Host()` 并把 host 通过 `HOST` env 传给脚本，两边强制对齐
+  （IPv6 方括号会被剥掉，怪字符走白名单回退）。
+- **配音页切引擎后 edge-only 控件不隐藏**（CSS 层叠 bug，影响所有三引擎切换）。
+  `.agg-hidden { display: none }` 定义在 `styles.css:1000`，而 `.agg-inline`
+  （`display:flex`，1309 行）和 `.agg-check`（`display:inline-flex`，1323 行）定义在它**之后**；
+  同特异性下后者胜出 → `.agg-hidden` 对同时挂这些布局类的元素**完全失效**。
+  配音页三引擎的行 div（edgeRow / doubaoRow / audio8Row）与两个复选框
+  （标点停顿 / 生成字幕）恰好全踩中：切到 Audio8 后云希音色、自然、正常、
+  单段字符上限全部残留，界面混乱。改为 `display: none !important`
+  （「强制隐藏」语义下使用 `!important` 是正当的），交叉验证：截图里被正确隐藏的
+  参考音频区（`.agg-ref-area` 定义在第 491 行、在 `.agg-hidden` 之前）与此诊断完全吻合。
+- **「规范化 [男]/[女]」按钮只在豆包模式显示**。该按钮产出的是 Seed-Audio 的
+  text_prompt（`凌云霄（男性，xx音色）说道："…"`），只有豆包引擎消费这种自然语言提示词；
+  edge（单音色 SSML）与 audio8（零样本克隆）都会把这段元信息**一字不差念出来**。
+  切到非豆包引擎时按钮自动隐藏。
+  **流水线不受影响**：短剧 Pro 逐镜配音合成前走 `toSpeechText()`（subtitle.ts），
+  实测 `[男]凌云霄："这路，太慢。"` → `"这路，太慢。"`，性别标记与署名都被剥掉，
+  audio8 拿到的已是纯台词。
+- **音色管理页试听与显示文本不一致**（用户报障）：列表显示的是音色的
+  `reference_text`（注册参考音频的转写），试听按钮却朗读固定短句
+  `我是中国人，我爱我的祖国。`——「听到的」和「看到的」对不上，被当成 bug。
+  修：新增 `pickAudio8PreviewText()`，试听改为朗读显示那段 reference_text 的
+  **第一句**（句末标点断句，超过分片上限 120 字符时截断保证单分片合成最快；
+  无标点截断到上限；空文本回退固定短句），按钮 tooltip 同步显示实际会念的句子。
+- **配音页主面板「试听」无视输入框内容**（同一报障的第二处）：`run(preview=true)`
+  原来永远读写死的 `明月出天山，苍茫云海间。`，输入框里打什么都不念 ——
+  与音色管理页的试听内容还不一样，用户以为是两个 bug。
+  修：抽通用 `pickPreviewSentence(text, cap, fallback)`（`pickAudio8PreviewText`
+  改为其特例），主面板试听改为**朗读输入框文本的第一句**（截 120 字符保单分片秒回，
+  空框才回退示例句），并给按钮加了行为说明的 tooltip（`tts.previewHint`）。
+  两个试听入口职责不同但行为一致：**念的都是按钮旁边显示的文本**。
+- **解说片模块无法切换到 Audio8 音色**（用户报障）：音色下拉写死 edge 的
+  `TTS_VOICES` 九个音色，`ttsProvider` 切到 audio8 后用户既选不到 audio8 音色，
+  面板还会把 edge 音色 id（`zh-CN-YunyangNeural`）直接传给 audio8 服务端（必然失败）。
+  修：`rebuildVoiceOptions()` 按当前引擎分支——edge 列内置音色（顺带修掉
+  「恢复项目只回填字段不同步下拉选中项」的老 bug）；audio8 异步拉服务端已注册音色
+  （带竞态序号防过期响应，失败保留 default 占位不阻断）。新增纯函数
+  `isEdgeVoiceId()` / `normalizeAudio8Voice()`（audio8Tts.ts）：合成与 manifest
+  统一走 `synthVoice()`，老 profile 里存的 edge 音色自动归位到 `settings.audio8Voice`；
+  profile 存档仍保留原始选择。解说片面板每次进入都会重建，配置页切引擎后回来即生效。
+
+### Changed
+
+- `.service.pid` 文件名收成常量 `AUDIO8_PID_FILE`（原来散在代码和注释里）。
+
+### 真机联调记录
+
+| 观察 | 结论 |
+| --- | --- |
+| uvicorn 起**两个** python 进程 | pidFile 记的是父进程（3.4 MB），真正加载 ONNX 的是子进程（**1.8 GB**） |
+| 杀父进程（3.4 MB 那个） | 子进程跟着退、端口释放 → **stop 脚本不带 `/T` 也能停干净**，先前担心不成立 |
+| `service.error.log` 里有 uvicorn INFO | 脚本把 stdout 合并进了 stderr，排查时别只盯 `service.log` |
+
+## 0.17.0 — Audio8-TTS 本地配音引擎（edge-tts 托底）
+
+> **未单独发布**：本版内容从未对外分发，也未单独提交，已与 v0.17.1 的修复合并在
+> 同一个 release 提交（`18d5fa0`）里，因此 git 上**只有 `0.17.1` 这一个 tag**。
+> `versions.json` 保留 `0.17.0` 仅为兼容映射。
+
+**主题**：微软后端长期故障时的第三条免费路径 —— 本机跑一个 HTTP 服务，插件直接调用，不再依赖微软。
+
+### Added
+
+- **第三条配音引擎 `audio8`**：`src/core/audio8Tts.ts`（新增）对接本机 Audio8-TTS 服务（HTTP `127.0.0.1:8024`），
+  免费、离线、不消耗任何厂商额度。服务需用户在本地另起一个进程，见 `doc/39-audio8-integration.md`。
+- **音色管理弹窗** `src/ui/Audio8VoiceModal.ts`（新增）：列出服务端音色、试听、注册新音色。
+  Audio8 是零样本克隆引擎，音色要「注册」而不是「选」—— 上传一段参考音频 + 逐字准确的转写文本即可。
+- **TTS 引擎分派层** `src/core/ttsRouter.ts`（新增）：`synthesizeTts()` 按 `ttsProvider` 统一路由，
+  `ttsContainer()` 给出落盘扩展名（edge → mp3，audio8 → wav）。
+  逐镜配音的四处调用点（流水线阶段 5 / 数字人阶段 2 / 素材生成 / 单镜重出）全部改为走这一层。
+- **流水线引擎回落**：短剧流水线未勾选豆包时原来硬编码 `edge`，现在回落设置里的默认引擎，
+  选 `audio8` 也能生效；提示文案随之三态化。
+- **服务管理器** `src/core/audio8Service.ts`（新增）：Config 页新增「Audio8 服务管理」子块，
+  用户填一次 install-dir 即可，点 Start/Stop 按钮控制本机 Audio8 服务（子进程 spawn `start_server.ps1` /
+  `stop_server.ps1`，POSIX 走 `.sh`）；状态来自 `/api/health` + `.service.pid`，5 秒缓存。
+  Start 走 90s 超时 + 二次 health 探测（脚本 exit 0 但端口没起来也报失败）；Stop 走 15s 超时。
+  **install-dir 会向下探测 ≤2 层**：套件把脚本放在 `…/Audio8_TTS/onnx_runtime_0_1b_int8/` 里，
+  填套件根目录也能自动定位到真正那一层，并在状态 chip 上标「已定位到 xxx」。
+- **schema v7 迁移**：`audio8InstallDir` 兜底为空串。前一版 v6 迁移（`audio8BaseUrl` / `audio8Voice` /
+  `audio8ChunkChars` 三字段兜底，`audio8ChunkChars` 夹到 `[10, 1000]`，`ttsProvider` 非法值归位 `edge`）保留。
+  顺手修掉 `DEFAULT_SETTINGS.schemaVersion`（4）与 `SCHEMA_VERSION`（5）长期不同步的问题。
+
+### Changed
+
+- **音频扩展名跟随引擎**：`shotAudioName(index, ext)` 增加可选参数。逐镜配音的落盘与
+  Remotion 按名反查三处必须一致，否则会出现「合成成功但成片无声」的静默失败。
+- **逐镜配音并发**：`audio8` 服务端一次只处理一条请求，流水线/素材阶段并发强制降为 1。
+- `PipelinePanel` 引擎提示按实际生效的引擎给出对应说明。
+
+### Fixed
+
+- `Audio8VoiceModal.submit()`：注册成功会重建列表，`finally` 里对已销毁的按钮调 `setText`
+  （打到 detached 节点，不抛异常但语义脏）。加 `domReplaced` 标志跳过。
+- `audio8Tts.ts`：删掉 `req.destroyed = true`（`HttpRequestLike` 接口无此字段，TS2551；
+  真正的竞态已由 `fail()` 的 `settled` 守卫挡住），并移除未使用的 `tError` import。
+
+### Docs
+
+- **新增** `doc/39-audio8-integration.md`：Audio8-TTS 服务端部署、协议对接、音色注册全流程
+- `doc/20-tts.md` 升级为三引擎：总览表、数据流图、流水线分派、FAQ
+- `doc/36-tts-alternatives.md` 新增 §3.6 Audio8-TTS（本次落地方案）
+- `doc/29-feature-matrix.md` 配音行与 i18n 键数同步
+
+### 测试
+
+- 新增 `test/audio8-client.test.mjs` 35 例（token 预算公式、WAV 头解析、按句分片、
+  multipart 构造、错误映射、i18n 缺键回退）
+- 新增 `test/audio8-service.test.mjs` 21 例（端口解析含 IPv6、install-dir 检查含 Windows/POSIX
+  分支、venv/脚本存在性校验、向下探测 1/2 层与跳过隐藏项、状态缓存按配置分键、
+  超时常量合理性）
+- 新增 `migrateSettings` v6 / v7 迁移用例；全量 **1253 例全绿**，`tsc --noEmit` 通过
+
+**注意**：Audio8-TTS 服务需用户在本地自行启动，沙箱 / CI 环境内后台进程会被回收。
+若启用服务管理器，Config 页里 Start/Stop 按钮会在后台 spawn 对应平台的启动脚本。
+
+---
+
 ## 0.16.3 — TTS 交叉探测 + 版本升级
 
 **主题**：edge-tts 后端整体宕机时给用户准确错误提示。
@@ -22,6 +982,8 @@
 - `doc/20-tts.md` 新增 §2.4「版本号维护」+ §6.1 从「3 条路径」扩展到「4 条路径」+ §6.2「诊断速查表」
 - `doc/14-changelog.md` v0.16.2 条目更新为「三条路径 + 版本升级 + 交叉探测」
 - **新增** `doc/36-tts-alternatives.md`：TTS 引擎替代方案评估（阿里云 NLS / ChatTTS / CosyVoice / GPT-SoVITS / 剪映 / Web Speech API）
+- **新增** `doc/37-ad-slots.md`：广告位系统总览（TopAdSlot 顶部常驻 + AdBanner 底部悬浮）+ 5 点修改广告位清单
+- `src/ad/top-ad-slot.ts` 顶部注释升级为「📌 修改广告位清单」：从原来的"两处必改"扩展到 linkUrl / ctaUrl / imageUrl / 文案 / mode 五点，config 字段配 🔗 位置标注，未来换广告不用猜"改哪儿"
 
 ### 排查套路沉淀
 

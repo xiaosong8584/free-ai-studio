@@ -1,0 +1,39 @@
+{
+  "version": "0.17.22",
+  "build": 1792826950,
+  "updatedAt": "2026-10-24T07:29:10.371Z",
+  "packs": {
+    "ja-JP": {
+      "hash": "a91c1673a88708a2d08df336ccfa215ff5177121d29b51ca3d2da5ea39b51643",
+      "bytes": 14147
+    },
+    "ko-KR": {
+      "hash": "225fac35b3f9de95cc91c021855d93303a1c2e1b2c0d68a71816b372ac371ddc",
+      "bytes": 12900
+    },
+    "ru-RU": {
+      "hash": "4c655201199d5c5cb2eb80ce2ffba28f477595866806338e1e32e99ae2232ce6",
+      "bytes": 16806
+    },
+    "ar-SA": {
+      "hash": "84d9f8352427897463d185b299f75752e091012181dfceff49545bf36306b8a0",
+      "bytes": 15377
+    },
+    "hi-IN": {
+      "hash": "eb38500cba8827c107cc37343ca4ac65f757e0f509354e65f814da05679c3d1e",
+      "bytes": 20491
+    },
+    "es-ES": {
+      "hash": "be1c88c7c06b2509fcc0adfde3ce79aeb7cfdf25e4527e8b4c86efd47bd6e09c",
+      "bytes": 12668
+    },
+    "fr-FR": {
+      "hash": "f87b1b3f04b943dbe9631e075a643ff5343024cda233483a744ad688f6455b09",
+      "bytes": 12836
+    },
+    "de-DE": {
+      "hash": "a5ad9e5fe1ea4731ad583c9b03fbfe9010635d46ec5f3937c3df7de4609bae88",
+      "bytes": 12698
+    }
+  }
+}

@@ -21,9 +21,9 @@
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* 品牌标识：图标 + 文字标均为透明底（base64 内联，src/ui/brand.ts），
-   明暗主题均可融入标题栏。图标 96px 资源显示 24px；文字标 2x 资源
-   显示 31.5px（字形约 15px，与原 font-size 一致）。 */
+/* 品牌标识：内联 SVG 图标 + DOM 文字标（零文件，src/ui/brand.ts），
+   明暗主题均可融入标题栏。图标 24×24；文字标 15px 字形、行高撑到 31.5px
+   以沿用原 2x 资源的标题栏高度。 */
 .agg-head-brand {
 	display: flex;
 	align-items: center;
@@ -34,12 +34,31 @@
 	height: 24px;
 	width: 24px;
 	display: block;
+	flex: none;
+}
+
+.agg-head-brand-icon svg {
+	width: 100%;
+	height: 100%;
+	display: block;
 }
 
 .agg-head-brand-wordmark {
-	height: 31.5px;
-	width: auto;
 	display: block;
+	height: 31.5px;
+	line-height: 31.5px;
+	font-family: "Poppins", "Montserrat", "Nunito Sans", "Segoe UI", var(--font-interface, ui-sans-serif), sans-serif;
+	font-size: 15px;
+	font-weight: 700;
+	letter-spacing: 0.1px;
+	white-space: nowrap;
+	user-select: none;
+	background-image: linear-gradient(90deg, #a25cff 0%, #7d7dff 46%, #35cff2 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	color: transparent;
+	filter: drop-shadow(0 0 2px rgba(160, 120, 255, 0.45)) drop-shadow(0 0 7px rgba(80, 200, 245, 0.28));
 }
 
 .agg-badge {
@@ -770,6 +789,60 @@
 .agg-btn-row {
 	display: flex;
 	gap: 8px;
+}
+
+/* ---------- 设置页：语言包版本对照报告 ---------- */
+
+.agg-locale-report {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 6px 0 4px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	background: var(--background-secondary);
+	font-size: var(--font-ui-smaller, 0.85em);
+	line-height: 1.5;
+}
+
+/* 节点是提前建好的（要落在 <details> 里），没内容时不该占一行空白 */
+.agg-locale-report:empty {
+	display: none;
+}
+
+.agg-locale-report-head {
+	color: var(--text-muted);
+}
+
+.agg-locale-report-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	font-family: var(--font-monospace, monospace);
+	color: var(--text-normal);
+}
+
+/* 8 行都要能一眼扫完：宁可横向滚动，也不要换行把两个语言挤成一坨 */
+.agg-locale-report-list > div {
+	white-space: nowrap;
+	overflow-x: auto;
+}
+
+.agg-locale-report-sum {
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.agg-locale-report-ok {
+	color: var(--text-success);
+}
+
+.agg-locale-report-warn {
+	color: var(--text-error);
+}
+
+.agg-locale-report-dim {
+	color: var(--text-muted);
 }
 
 .agg-output {
@@ -1918,20 +1991,23 @@
 	margin: 0 7px 7px;
 }
 
-/* =============== 短剧面板：五大分区 =============== */
+/* =============== 短剧面板：七大分区（卡片容器） =============== */
 
-/* 每个分区自带标题与上下间距，用一条分隔线把功能区切开 */
+/* 每个分区是一张卡片：底色 + 描边 + 圆角，控件归属一目了然；
+   折叠后整卡收缩成一条标题栏，卡片轮廓仍在 */
 .agg-pipe-sec {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	padding: 12px 0;
-	border-top: 1px solid var(--background-modifier-border);
+	padding: 12px;
+	margin-bottom: 12px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 10px;
 }
 
-.agg-pipe-sec:first-child {
-	border-top: 0;
-	padding-top: 0;
+.agg-pipe-sec:last-child {
+	margin-bottom: 0;
 }
 
 /* ② 生成流程：阶段链路芯片 */
@@ -2129,18 +2205,16 @@
 
 .agg-cast-grid-leads,
 .agg-cast-grid-supports,
-.agg-cast-grid-scenes {
-	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+.agg-cast-grid-scenes,
+.agg-cast-grid-props,
+.agg-cast-grid-other {
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
+/* 四类设定板统一 1:1 方版（人物/场景 2048×2048 高清，道具/其他 1024×1024），缩略图比例随之统一为 1 / 1 */
 .agg-cast-leads .agg-pro-asset-img,
 .agg-cast-supports .agg-pro-asset-img,
-.agg-cast-scenes .agg-pro-asset-img {
-	aspect-ratio: 16 / 9;
-	object-fit: contain;
-	background: var(--background-secondary);
-}
-
+.agg-cast-scenes .agg-pro-asset-img,
 .agg-cast-props .agg-pro-asset-img,
 .agg-cast-other .agg-pro-asset-img {
 	aspect-ratio: 1 / 1;
@@ -2198,7 +2272,11 @@
 /* =============== 媒体放大查看器 =============== */
 
 .agg-viewer {
-	height: min(86vh, 820px);
+	/* height 不再写死 86vh——图片 load 后 JS 会给 .agg-viewer-body 写 aspect-ratio，
+	   box（shrink-to-fit）跟着收缩到「装得下这张图」的尺寸，横向图片不再上下堆大片黑边。
+	   max-height 兜底：无 aspect-ratio 时（video/audio）保持原来的竖向高模态。 */
+	max-height: min(86vh, 820px);
+	min-height: 240px;
 	padding: 16px;
 	overflow: hidden;
 	background: rgba(0, 0, 0, 0.92);
@@ -2209,17 +2287,24 @@
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	width: 100%;
-	height: 100%;
+	/* 尺寸由 body（+ aspect-ratio）驱动；box 自身 shrink-to-fit。
+	   非图片路径 body 无 aspect-ratio，box 会撑到 body 的 flex:1 结果。 */
+	width: auto;
+	max-width: 100%;
+	max-height: 100%;
 }
 
 .agg-viewer-body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 100%;
+	/* 图片路径下 JS 会写 aspect-ratio，body 收缩到图片比例；
+	   视频/音频路径下不设 aspect-ratio，flex:1 撑满 box 剩余高度。 */
 	flex: 1 1 auto;
+	width: auto;
 	min-height: 0;
+	max-width: 94vw;
+	max-height: 84vh;
 	overflow: hidden;
 	touch-action: none;
 }
@@ -2482,6 +2567,15 @@
 	font-size: 12px;
 	color: var(--text-accent);
 	width: 12px;
+}
+
+.agg-mtv-project-dir {
+	font-size: 11px;
+	color: var(--text-muted);
+	max-width: 300px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 /* 大文本框（创作意图 / 歌词）整块撑满。
@@ -2924,6 +3018,103 @@
 	background: var(--color-red, #e05350);
 	border-color: var(--color-red, #e05350);
 	color: #fff;
+}
+
+/* 运行状态条（自动跑完时常驻）：当前步骤 / 第几步 / 镜数 / 百分比 + 开始时间 /
+   已过 / 预计剩。放在 bar 与分组之间——进度是全局信息，不属于任何单个分组；
+   默认隐藏，只有 runPipeline 运行时由 renderRunbar 显示。 */
+.agg-explain-runbar {
+	margin: 0 0 10px;
+	padding: 8px 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary);
+}
+
+.agg-explain-runbar.is-hidden {
+	display: none;
+}
+
+.agg-explain-runbar-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.agg-explain-runbar-stage {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.agg-explain-runbar-meta {
+	font-size: 11.5px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 终态定格：失败 = 红色边框强调；已停止 = 中性（用户主动行为，不报警） */
+.agg-explain-runbar.is-failed {
+	border-color: var(--color-red, #e05350);
+}
+
+.agg-explain-runbar.is-failed .agg-explain-runbar-stage {
+	color: var(--color-red, #e05350);
+}
+
+.agg-explain-runbar.is-failed .agg-explain-progress-fill {
+	background: var(--color-red, #e05350);
+}
+
+/* 错误行：摘要（截断 + hover 全文）+ 查看日志按钮。is-empty = 运行中，隐藏 */
+.agg-explain-runbar-error {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px dashed var(--background-modifier-border);
+	font-size: 11.5px;
+}
+
+.agg-explain-runbar-error.is-empty {
+	display: none;
+}
+
+.agg-explain-runbar-errmsg {
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.agg-explain-runbar.is-failed .agg-explain-runbar-errmsg {
+	color: var(--color-red, #e05350);
+}
+
+.agg-explain-runbar-logbtn {
+	flex: 0 0 auto;
+	padding: 1px 8px;
+	font-size: 11px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+.agg-explain-runbar-logbtn:hover:not(:disabled) {
+	background: var(--background-modifier-hover);
+}
+
+.agg-explain-runbar-logbtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .agg-explain-out {
@@ -4714,4 +4905,1368 @@
 	gap: 8px;
 	justify-content: flex-end;
 	margin-top: 12px;
+}
+
+/* ============================================================
+   白板渲染动画面板（doc/45 M2.5 UI 重排）
+   步骤卡片布局：① 引擎 → ② 字幕 → ③ 逐幕制作 → ④ 合并成片
+   ============================================================ */
+.agg-wb {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* 项目头：选择 / 标题 / 新建 / 删除 —— 一行 flex，不再挤在一起 */
+.agg-wb-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+.agg-wb-sel {
+	flex: 0 1 180px;
+	min-width: 120px;
+}
+.agg-wb-title {
+	flex: 1 1 160px;
+	min-width: 120px;
+}
+/* 孤儿生成物目录提示：警示色一行 + 行内清理按钮（没有孤儿时整行 agg-hidden） */
+.agg-wb-orphan {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-top: 6px;
+	font-size: 11.5px;
+	color: var(--text-warning, var(--text-muted));
+}
+.agg-wb-orphan-btn {
+	font-size: 11.5px;
+	padding: 2px 10px;
+}
+
+/* 状态行：全局反馈（安装计时 / 各步结果） */
+.agg-wb-status {
+	min-height: 1.2em;
+}
+
+/* 步骤卡片：编号标题 + 内容，竖向排列 */
+.agg-wb-card {
+	border: 1px solid var(--background-modifier-border);
+	border-left: 3px solid var(--interactive-accent);
+	border-radius: 8px;
+	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	background: var(--background-primary);
+}
+
+.agg-wb-step-title {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text-normal);
+	letter-spacing: 0.02em;
+}
+
+/* ① 引擎卡片 */
+.agg-wb-engine {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.agg-wb-engine-line {
+	font-size: 12px;
+	color: var(--text-muted);
+	word-break: break-all;
+}
+.agg-wb-engine-state {
+	font-size: 12px;
+	font-weight: 600;
+}
+.agg-wb-engine-ok {
+	color: var(--text-success, #4caf50);
+}
+.agg-wb-engine-bad {
+	color: var(--text-error);
+}
+.agg-wb-engine-hand {
+	color: var(--text-faint);
+}
+
+/* 安装区：提示文案 + 按钮同行；日志区平时收起，安装时展开 */
+.agg-wb-install-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+.agg-wb-install-hint {
+	flex: 1 1 200px;
+	font-size: 11.5px;
+}
+.agg-wb-engine-log {
+	margin: 0;
+	padding: 8px 10px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	line-height: 1.6;
+	max-height: 150px;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+/* ② 字幕区：动作行（选文件 / 分幕参数 / 生成）+ 输入框 */
+.agg-wb-srt {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.agg-wb-srt .agg-btn {
+	align-self: flex-start;
+}
+.agg-wb-srt-input {
+	min-height: 110px;
+	resize: vertical;
+	font-size: 12px;
+	line-height: 1.6;
+}
+
+/* 第二步：需求提示词框（比字幕框矮，属于「输入区」不是「内容区」） */
+.agg-wb-brief-input {
+	min-height: 64px;
+	resize: vertical;
+	font-size: 12px;
+	line-height: 1.6;
+}
+/* 需求框下面的常驻说明（bug6：placeholder 是灰色浮字、不占位，用户看不出这格该写什么） */
+.agg-wb-brief-help {
+	font-size: 11px;
+	color: var(--text-muted);
+	line-height: 1.6;
+	margin-top: -2px;
+}
+
+/* 样式分组（bug6：艺术样式一组、画笔配置一组；原来两个下拉挤在同一行） */
+.agg-wb-style-group {
+	margin: 6px 0;
+	padding: 8px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary-alt);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.agg-wb-style-group-hint {
+	font-size: 11px;
+	color: var(--text-muted);
+	line-height: 1.6;
+}
+/* 批量模式开关状态徽标：让空 checkbox 也能一眼看出当前是「开」还是「关」，
+   避免用户把默认的空 checkbox 误读成"已启用批量" */
+.agg-batch-badge {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  vertical-align: 1px;
+}
+
+.agg-batch-badge.agg-batch-badge--on {
+  color: var(--text-normal);
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+}
+/* 主角形象输入框：单行占位——它只是一句角色设定（比 brief 短得多），
+   不需要通用 .agg-textarea 的 min-height:120px；内容过长时可拖拽增高。 */
+.agg-wb-cast-input {
+	min-height: 0;
+}
+/* 艺术样式「全量覆盖」警告行：红字常显（.agg-hint.is-warn-text）——
+   当前样式已关掉系统的禁文字底线，告诉用户「现在没有安全网了」 */
+.agg-wb-style-override-warn {
+	line-height: 1.6;
+}
+
+/* ---------- 白板 · 艺术样式预览对照表（独立标签页视图） ---------- */
+/* 整页容器：占满标签页，标题行 + 自动换行网格 */
+.agg-wb-preview-grid-wrap {
+	height: 100%;
+	overflow: auto;
+	padding: 12px 16px;
+}
+.agg-wb-preview-head {
+	margin-bottom: 10px;
+}
+.agg-wb-preview-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+/* 网格：auto-fill minmax 240px，窄屏自动换行（与 326 风格库对照表同形态） */
+.agg-wb-preview-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 12px;
+}
+.agg-wb-preview-card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary-alt);
+}
+/* 小图密览（mini）：比网格更密的一档——约 170px 列宽、更紧的间距与字号，
+   一屏 12+ 张仍能看清主体细节；点图放大看全图 */
+.agg-wb-preview-mini-wrap {
+	height: 100%;
+	overflow: auto;
+	padding: 12px 16px;
+}
+.agg-wb-preview-mini {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+	gap: 8px;
+}
+.agg-wb-preview-card-mini {
+	padding: 6px;
+	gap: 3px;
+	border-radius: 6px;
+}
+.agg-wb-preview-card-mini .agg-wb-preview-id {
+	font-size: 10px;
+}
+.agg-wb-preview-card-mini .agg-wb-preview-name {
+	font-size: 11px;
+}
+.agg-wb-preview-img {
+	width: 100%;
+	aspect-ratio: 4 / 5;
+	object-fit: cover;
+	border-radius: 6px;
+	cursor: pointer;
+	background: var(--background-modifier-border);
+}
+.agg-wb-preview-card.is-failed .agg-wb-preview-missing {
+	width: 100%;
+	aspect-ratio: 4 / 5;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: 13px;
+}
+/* 生成中占位卡：浅灰底 + 脉冲提示（出图循环逐款点亮，用户看到进度流动） */
+.agg-wb-preview-card.is-pending {
+	opacity: 0.55;
+}
+.agg-wb-preview-card.is-pending .agg-wb-preview-pending {
+	width: 100%;
+	aspect-ratio: 4 / 5;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: 13px;
+	animation: agg-wb-preview-pulse 1.2s ease-in-out infinite;
+}
+@keyframes agg-wb-preview-pulse {
+	0%, 100% { opacity: 0.45; }
+	50% { opacity: 1; }
+}
+/* 进度提示行（done / partial / aborted 终态展示在头部下方；partial 用警示色） */
+.agg-wb-preview-progress {
+	margin-top: 8px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.agg-wb-preview-progress.is-partial {
+	color: var(--text-warning);
+}
+.agg-wb-preview-name {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.agg-wb-preview-id {
+	font-size: 11px;
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+/* ---- 表格 / 网格双形态 + 统计信息 + 模型说明（bug8：默认表格） ---- */
+/* 外层容器：占满标签页，纵向滚动 */
+.agg-wb-preview-table-wrap {
+	height: 100%;
+	overflow: auto;
+	padding: 12px 16px;
+	box-sizing: border-box;
+}
+/* 内层：列多时横向滚动（bug9：避免 7 列挤成一坨错位） */
+.agg-wb-preview-table-inner {
+	overflow-x: auto;
+	width: 100%;
+}
+/* 标题行：标题 + 统计 chip + 视图切换按钮 */
+.agg-wb-preview-title-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-bottom: 10px;
+}
+.agg-wb-preview-title-row .agg-wb-preview-title {
+	flex: 0 0 auto;
+}
+/* 统计信息行（主体 / 生成模型 / 规格） */
+.agg-wb-preview-stats-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin: 0 0 8px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.agg-wb-preview-stat {
+	white-space: nowrap;
+}
+/* 统计 chip：浅灰圆角小方块，label + value；失败 chip 走警示色 */
+.agg-wb-preview-stats {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-left: auto;
+}
+.agg-wb-preview-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: var(--background-modifier-border);
+	font-size: 11px;
+	color: var(--text-muted);
+}
+.agg-wb-preview-chip-value {
+	color: var(--text-normal);
+	font-weight: 600;
+}
+.agg-wb-preview-chip.is-fail {
+	background: var(--background-modifier-warning);
+}
+.agg-wb-preview-chip.is-fail .agg-wb-preview-chip-value {
+	color: var(--text-warning);
+}
+/* 模型说明（一句话出图能力 / 风格倾向） */
+.agg-wb-preview-model-note {
+	margin: 0 0 10px;
+	padding: 8px 10px;
+	border-radius: 6px;
+	background: var(--background-secondary-alt);
+	border: 1px solid var(--background-modifier-border);
+	font-size: 12px;
+	color: var(--text-muted);
+	line-height: 1.6;
+}
+/* 视图切换按钮（表格 ⇄ 网格） */
+.agg-wb-preview-mode-btn {
+	margin-left: 4px;
+	padding: 3px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary-alt);
+	color: var(--text-muted);
+	font-size: 12px;
+	cursor: pointer;
+}
+.agg-wb-preview-mode-btn:hover {
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
+}
+/* 对比表格：风格提示词全列不截断，行高随内容；缩略图固定 4:5 */
+.agg-wb-preview-table {
+	border-collapse: collapse;
+	width: 100%;
+	margin-top: 6px;
+	font-size: 12px;
+}
+.agg-wb-preview-table th,
+.agg-wb-preview-table td {
+	padding: 6px 8px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	vertical-align: top;
+	text-align: left;
+}
+.agg-wb-preview-table thead th {
+	position: sticky;
+	top: 0;
+	background: var(--background-secondary);
+	font-weight: 600;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+.agg-wb-preview-table .agg-wb-preview-td-no,
+.agg-wb-preview-table .agg-wb-preview-td-id {
+	white-space: nowrap;
+	color: var(--text-muted);
+}
+/* id 列限宽：auto 布局下长 id 会把整列撑宽，超出截断 */
+.agg-wb-preview-table .agg-wb-preview-td-id {
+	max-width: 150px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.agg-wb-preview-table .agg-wb-preview-td-name {
+	font-weight: 600;
+	color: var(--text-normal);
+}
+.agg-wb-preview-table .agg-wb-preview-td-desc {
+	max-width: 320px;
+	white-space: pre-wrap;
+	word-break: break-word;
+	line-height: 1.5;
+}
+.agg-wb-preview-table .agg-wb-preview-td-thumb {
+	width: 56px;
+	vertical-align: top;
+}
+/* 色板列：td 保持 table-cell（display:flex 会破坏行高对齐，色块越过行分割线），
+   swatch 用 inline-block 自然换行，列内容垂直居中 */
+.agg-wb-preview-table .agg-wb-preview-td-palette {
+	vertical-align: middle;
+}
+.agg-wb-preview-table .agg-wb-preview-td-palette .agg-wb-preview-swatch {
+	margin: 1px 2px 1px 0;
+}
+/* 色板小方块（点缀色） */
+.agg-wb-preview-swatch {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border-radius: 3px;
+	border: 1px solid var(--background-modifier-border);
+	vertical-align: middle;
+}
+/* 名称列内的特性标签：relaxRealism 普通、override 警示 */
+.agg-wb-preview-tag {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 0 6px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 500;
+	vertical-align: middle;
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+}
+.agg-wb-preview-tag.is-warn {
+	background: var(--background-modifier-warning);
+	color: var(--text-warning);
+}
+/* 复制 JSON 按钮（行操作列） */
+.agg-wb-preview-copy {
+	padding: 2px 8px;
+	border-radius: 5px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary-alt);
+	color: var(--text-muted);
+	font-size: 11px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.agg-wb-preview-copy:hover {
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
+}
+/* 缩略图列：4:5 竖版（56×70，行紧凑不遮分割线），生成中 / 失败 用占位块 */
+.agg-wb-preview-thumb {
+	width: 56px;
+	height: 70px;
+	object-fit: cover;
+	border-radius: 5px;
+	cursor: pointer;
+	background: var(--background-modifier-border);
+	display: block;
+}
+.agg-wb-preview-thumb-pending,
+.agg-wb-preview-thumb-failed {
+	width: 56px;
+	height: 70px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 5px;
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: 11px;
+	text-align: center;
+}
+.agg-wb-preview-thumb-pending {
+	animation: agg-wb-preview-pulse 1.2s ease-in-out infinite;
+}
+.agg-wb-preview-thumb-failed {
+	color: var(--text-warning);
+}
+/* 表格行状态高亮：生成中灰显，失败警示底 */
+.agg-wb-preview-row.is-pending {
+	opacity: 0.55;
+}
+.agg-wb-preview-row.is-failed {
+	background: var(--background-modifier-warning);
+}
+/* 诉求③ 卡片对比视图（默认形态）：编号 + 大缩略图 + 信息列 */
+.agg-wb-preview-card-wrap {
+	height: 100%;
+	overflow: auto;
+	padding: 12px 16px;
+	box-sizing: border-box;
+}
+.agg-wb-preview-cardlist {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin-top: 10px;
+}
+/* 单款卡片：左编号 + 中大图 + 右信息，一行一卡，行间分隔 */
+.agg-wb-preview-cardrow {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary-alt);
+}
+.agg-wb-preview-cardrow-no {
+	flex: 0 0 42px;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--text-muted);
+	padding-top: 2px;
+}
+/* 大缩略图：4:5 竖版，比表格列大得多（诉求③ 视觉参照） */
+.agg-wb-preview-cardrow-thumb {
+	flex: 0 0 180px;
+}
+.agg-wb-preview-cardrow-img {
+	width: 180px;
+	height: 225px;
+	object-fit: cover;
+	border-radius: 6px;
+	cursor: pointer;
+	display: block;
+	background: var(--background-modifier-border);
+}
+.agg-wb-preview-cardrow-ph {
+	width: 180px;
+	height: 225px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: 13px;
+}
+.agg-wb-preview-cardrow-ph-pending {
+	animation: agg-wb-preview-pulse 1.2s ease-in-out infinite;
+}
+.agg-wb-preview-cardrow-ph-failed {
+	color: var(--text-warning);
+}
+/* bug13：卡片对比视图的生成中态——整卡微透明（缩略图容器内是「生成中…」占位），
+   增量刷新把图铺进容器后移除 is-pending 恢复常态 */
+.agg-wb-preview-cardrow.is-pending {
+	opacity: 0.72;
+}
+/* 搜索栏：标题行内的过滤输入框 + 无命中提示 */
+.agg-wb-preview-search {
+	flex: 0 1 220px;
+	min-width: 120px;
+	font-size: 12.5px;
+	padding: 3px 9px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+.agg-wb-preview-search:focus {
+	border-color: var(--background-modifier-border-hover);
+	outline: none;
+}
+.agg-wb-preview-nohit {
+	margin-top: 14px;
+	color: var(--text-muted);
+	font-size: 13px;
+}
+/* 信息列：红 id + 名称 + 英文斜体 + 说明 + 标签 + 色板 */
+.agg-wb-preview-cardrow-info {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+.agg-wb-preview-cardrow-id {
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--text-error);
+	letter-spacing: 0.02em;
+}
+.agg-wb-preview-cardrow-name {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+.agg-wb-preview-cardrow-nameen {
+	font-size: 12px;
+	font-style: italic;
+	color: var(--text-muted);
+}
+.agg-wb-preview-cardrow-desc {
+	font-size: 12.5px;
+	color: var(--text-muted);
+	line-height: 1.5;
+}
+/* 详细信息区（卡片视图空间宽阔 → styleBlock 全文 / 追加正负向 / 画布与线条色） */
+.agg-wb-preview-cardrow-detail {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	margin-top: 4px;
+	padding: 8px 10px;
+	border-left: 2px solid var(--background-modifier-border-hover);
+	border-radius: 4px;
+	background: var(--background-primary);
+}
+.agg-wb-preview-detail-label {
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	color: var(--text-faint);
+	text-transform: uppercase;
+}
+.agg-wb-preview-detail-code {
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	line-height: 1.55;
+	color: var(--text-muted);
+	white-space: pre-wrap;
+	word-break: break-word;
+	user-select: text;
+}
+.agg-wb-preview-detail-colors {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-top: 2px;
+}
+.agg-wb-preview-detail-colors .agg-wb-preview-detail-label {
+	text-transform: none;
+	letter-spacing: 0;
+}
+.agg-wb-preview-detail-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+.agg-wb-preview-detail-hex {
+	font-family: var(--font-monospace);
+	font-size: 10.5px;
+	color: var(--text-faint);
+}
+.agg-wb-preview-cardrow-tags {
+	display: flex;
+	gap: 5px;
+	flex-wrap: wrap;
+	min-height: 0;
+}
+.agg-wb-preview-cardrow-palette {
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+	align-items: center;
+	margin-top: 2px;
+}
+/* 色板列对齐已并入上方 .agg-wb-preview-td-palette 规则（td 保持 table-cell + 垂直居中，
+   不再加垂直 padding——行高由内容自然撑，色块不越过行分割线） */
+.agg-wb-preview-cardrow-palette .agg-wb-preview-swatch,
+.agg-wb-preview-table .agg-wb-preview-swatch {
+	margin: 2px 0;
+}
+/* MTV 创作意图输入框：单行占位——它是一句概括性描述（不是歌词正文），
+   不需要通用 .agg-textarea 的 min-height:120px；内容过长时可拖拽增高。 */
+.agg-mtv-intent-input {
+	min-height: 0;
+}
+
+/* 艺术样式 + 画笔样式行：两个下拉 + 预览图 + 两个小按钮 */
+.agg-wb-style-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+}
+.agg-wb-style-label {
+	font-size: 11.5px;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+.agg-wb-style-sel {
+	flex: 0 1 180px;
+	min-width: 120px;
+	font-size: 11.5px;
+}
+/* 画笔预览：PNG data URL，等比缩到 36px 高（笔触是细长素材，限高不限宽） */
+.agg-wb-brush-preview {
+	height: 36px;
+	width: auto;
+	max-width: 72px;
+	object-fit: contain;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--background-primary);
+	cursor: pointer;
+}
+.agg-wb-brush-preview:hover {
+	border-color: var(--accent);
+}
+/* 墨迹质感实时预览画布：canvas 内部分辨率固定 320x120，这里等比缩到 160x60，
+   宽高必须同比例（1.6:1）否则笔画会被拉变形。 */
+.agg-wb-ink-preview {
+	width: 160px;
+	height: 60px;
+	margin-left: 6px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--background-primary);
+	vertical-align: middle;
+}
+.agg-wb-brush-add,
+.agg-wb-brush-del,
+.agg-wb-art-import,
+.agg-wb-art-del {
+	padding: 4px 8px;
+	font-size: 11px;
+}
+.agg-wb-brush-del:disabled,
+.agg-wb-art-del:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+/* 画笔预览放大弹窗（内置素材在 Vault 外，MediaViewer 用不了，直接喂 data URL） */
+.modal-content.agg-wb-brush-preview-modal {
+	padding: 18px 22px;
+}
+.agg-wb-brush-preview-full {
+	max-width: 100%;
+	max-height: 62vh;
+	object-fit: contain;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-primary);
+	margin-top: 10px;
+}
+/* 导入样式模板弹窗（JSON 粘贴区，比画笔描述框高） */
+.modal-content.agg-wb-style-modal {
+	padding: 18px 22px;
+}
+.agg-wb-style-json {
+	min-height: 210px;
+	resize: vertical;
+	font-family: var(--font-monospace);
+	font-size: 11.5px;
+	line-height: 1.6;
+}
+.agg-wb-style-status-bad {
+	color: var(--text-error);
+}
+/* 主路径按钮（选文件）：撑满一行，比「从文本导入」醒目 */
+.agg-wb-style-file-btn {
+	width: 100%;
+	margin-bottom: 4px;
+	padding: 8px 12px;
+	font-weight: 600;
+}
+/* 「或粘贴 JSON 文本」分隔行：弱化处理，别抢主路径的注意力 */
+.agg-wb-style-or {
+	margin: 10px 0 6px;
+	font-size: 11.5px;
+	color: var(--text-faint);
+	text-align: center;
+	position: relative;
+}
+.agg-wb-minutes-input {
+	width: 64px;
+}
+
+/* 执行日志（一键成片 / 自动生成字幕）：头部信息 + 进度条 + 节点行 */
+.agg-wb-runlog {
+	margin-top: 8px;
+	padding: 8px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary);
+}
+.agg-wb-runlog-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	font-size: 11.5px;
+	color: var(--text-muted);
+}
+.agg-wb-runlog-start {
+	font-weight: 600;
+	color: var(--text-normal);
+}
+.agg-wb-runlog-pct {
+	margin-left: auto;
+	font-weight: 700;
+	color: var(--interactive-accent);
+	font-variant-numeric: tabular-nums;
+}
+.agg-wb-runlog .agg-wb-progress-track {
+	margin: 6px 0;
+}
+.agg-wb-runlog-lines {
+	max-height: 132px;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	word-break: break-all;
+	font-size: 11px;
+	line-height: 1.55;
+	color: var(--text-muted);
+	font-family: var(--font-monospace);
+}
+
+/* 新增画笔弹窗 */
+.agg-wb-brush-modal .agg-wb-brush-field {
+	margin: 10px 0;
+}
+.agg-wb-brush-modal .agg-wb-brush-field label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+.agg-wb-brush-modal .agg-wb-brush-field textarea {
+	width: 100%;
+	resize: vertical;
+}
+.agg-wb-brush-status {
+	min-height: 1.4em;
+	margin: 6px 0;
+	white-space: pre-wrap;
+}
+.agg-wb-brush-btns {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 8px;
+}
+.agg-wb-target {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.agg-wb-target-input {
+	width: 70px;
+}
+
+/* ③ 逐幕制作：幕卡片纵向堆叠，卡内分区 */
+.agg-wb-scene-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.agg-wb-scene-card {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 7px;
+	padding: 8px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	background: var(--background-secondary);
+}
+.agg-wb-scene-head {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+.agg-wb-scene-text {
+	font-size: 11.5px;
+	color: var(--text-muted);
+	line-height: 1.5;
+	word-break: break-word;
+}
+.agg-wb-scene-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.agg-wb-chip {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+}
+.agg-wb-chip-done {
+	background: var(--background-modifier-hover);
+	color: var(--text-success, #4caf50);
+	border: 1px solid var(--background-modifier-border);
+}
+.agg-wb-chip-idle {
+	background: transparent;
+	color: var(--text-faint);
+	border: 1px dashed var(--background-modifier-border);
+}
+
+/* 幕内按钮行：统一 flex + gap，按钮不再裸堆 */
+.agg-wb-scene-btns {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.agg-wb-scene-btns .agg-btn {
+	padding: 4px 10px;
+	font-size: 11.5px;
+}
+.agg-wb-scene-prog {
+	margin: 0;
+	font-size: 11px;
+	min-height: 1.2em;
+	word-break: break-all;
+}
+/* 「查看运行日志」直达入口（2026-10-22）：日志面板在主工作台的「日志」Tab，
+   白板面板内原本没有任何入口，用户找不到就误以为「没有日志」。 */
+.agg-wb-log-link {
+	margin: 4px 0 8px;
+	font-size: 11px;
+	padding: 2px 8px;
+}
+/* 幕内成果缩略图行（线稿 / 单幕成片）：点击放大走 MediaViewer */
+.agg-wb-scene-thumbs {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+.agg-wb-scene-thumb {
+	width: 72px;
+	height: 52px;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	transition: transform 0.12s ease, box-shadow 0.12s ease;
+	background: var(--background-secondary-alt);
+}
+.agg-wb-scene-thumb:hover {
+	transform: scale(1.03);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	border-color: var(--interactive-accent);
+}
+.agg-wb-thumb-image {
+	aspect-ratio: 4 / 3;
+}
+.agg-wb-thumb-video {
+	aspect-ratio: 16 / 9;
+}
+/* 缩略图行下方说明行（与 chips 之间留白一致） */
+.agg-wb-scene-thumbs-hint {
+	margin: -2px 0 0;
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+/* ④ 合并成片：批量动作行 */
+.agg-wb-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+/* 一键成片：主按钮（弹性占宽）+ 停止按钮（固定宽）同一行；
+   运行态由 setOneClickRunning 切 disabled，视觉权重主按钮高于停止 */
+.agg-wb-oneclick {
+	flex: 1;
+	min-width: 0;
+	padding: 8px 12px;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+.agg-wb-oneclick-stop {
+	flex: 0 0 auto;
+}
+
+/* 音色行：标签 + 下拉同一行（与解说篇的 field 同构，压缩为单行） */
+.agg-wb-voice-row {
+	gap: 6px;
+}
+.agg-wb-voice-label {
+	font-size: 11.5px;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+.agg-wb-voice-sel {
+	flex: 0 1 220px;
+	min-width: 140px;
+	font-size: 11.5px;
+}
+
+/* 安装进度条：轨道 + 填充（条纹动效）+ 百分比标签 */
+.agg-wb-progress-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.agg-wb-progress-track {
+	flex: 1 1 auto;
+	height: 8px;
+	border-radius: 999px;
+	background: var(--background-modifier-hover);
+	overflow: hidden;
+}
+.agg-wb-progress-bar {
+	height: 100%;
+	width: 0%;
+	border-radius: 999px;
+	background: var(--interactive-accent);
+	transition: width 0.35s ease;
+}
+/* 进行中：斜条纹流动（CSS 动效，标明「还活着」） */
+.agg-wb-progress-bar.agg-wb-progress-active {
+	background-image: linear-gradient(
+		-45deg,
+		rgba(255, 255, 255, 0.22) 25%,
+		transparent 25%,
+		transparent 50%,
+		rgba(255, 255, 255, 0.22) 50%,
+		rgba(255, 255, 255, 0.22) 75%,
+		transparent 75%,
+		transparent
+	);
+	background-size: 14px 14px;
+	animation: agg-wb-progress-stripe 0.9s linear infinite;
+}
+@keyframes agg-wb-progress-stripe {
+	from { background-position: 0 0; }
+	to { background-position: 14px 0; }
+}
+.agg-wb-progress-pct {
+	flex: 0 0 auto;
+	min-width: 110px;
+	text-align: right;
+	font-size: 11.5px;
+}
+
+/* 依赖状态行（探测后回填：已就绪绿 / 未就绪红） */
+.agg-wb-deps-line {
+	font-weight: 600;
+}
+
+/* 「安装依赖」按钮：依赖已就绪时置灰并弱化，避免用户重复安装白等 */
+.agg-wb-engine-install:disabled {
+	opacity: 0.65;
+	cursor: default;
+}
+.agg-wb-engine-install.agg-wb-install-done {
+	color: var(--text-success, #4caf50);
+	background: var(--background-secondary);
+	border-color: var(--background-modifier-border);
+	font-weight: 600;
+}
+
+/* 自动配音开关（复选框 + 文案同行） */
+.agg-wb-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--text-normal);
+	cursor: pointer;
+	user-select: none;
+}
+
+/* 白板：配音/成片预览（2026-10-19） */
+.agg-wb-clickable {
+	cursor: pointer;
+}
+.agg-wb-clickable:hover {
+	color: var(--text-accent);
+}
+.agg-wb-audio-preview {
+	margin-top: 4px;
+}
+.agg-wb-audio-preview audio {
+	width: 100%;
+	max-width: 460px;
+	height: 36px;
+}
+.agg-wb-final-progress {
+	margin-top: 4px;
+	color: var(--text-muted);
+}
+.agg-wb-final-preview {
+	margin-top: 6px;
+}
+.agg-wb-final-thumb {
+	cursor: pointer;
+	max-width: 280px;
+}
+
+.agg-wb-voice-log {
+	margin-top: 4px;
+	max-height: 220px;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	word-break: break-all;
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	line-height: 1.5;
+	color: var(--text-muted);
+	border-left: 2px solid var(--background-modifier-border);
+	padding-left: 8px;
+}
+
+/* 进度条：横贯 9 个节点，宽度按节点数 + 状态派生（done=整格满 / running=满但带光带 / pending=22% 灰） */
+.agg-wb-pipe .pipe.flow-bar {
+	display: flex;
+	gap: 3px;
+	margin: 8px 0 6px;
+}
+.agg-wb-pipe .pipe.flow-bar-inner {
+	flex: 1;
+	min-height: 8px;
+	border-radius: 4px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
+	position: relative;
+}
+.agg-wb-pipe .pipe.flow-bar-inner.pending::after,
+.agg-wb-pipe .pipe.flow-bar-inner.running::after,
+.agg-wb-pipe .pipe.flow-bar-inner.done::after {
+	content: '';
+	display: block;
+	height: 100%;
+}
+.agg-wb-pipe .pipe.flow-bar-inner.pending::after {
+	background: rgba(150, 150, 150, 0.5);
+	width: 22%;
+}
+.agg-wb-pipe .pipe.flow-bar-inner.running::after {
+	background: linear-gradient(90deg, rgba(60, 90, 200, 0.35), rgba(60, 90, 200, 0.85));
+	width: 100%;
+	animation: agg-wb-pipe-scan 1.6s linear infinite;
+}
+.agg-wb-pipe .pipe.flow-bar-inner.done::after {
+	background: var(--text-accent);
+	width: 100%;
+}
+@keyframes agg-wb-pipe-scan {
+	0%   { transform: translateX(-100%); }
+	100% { transform: translateX(100%); }
+}
+/* 节点标签：running 高亮成主色 */
+.agg-wb-pipe .pipe.flow-bar-inner.running .pipe.flow-bar-label {
+	color: var(--text-accent);
+}
+/* 状态元信息条：单行 flex，两端对齐，超长省略 */
+.agg-wb-pipe .pipe.flow-status {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.agg-wb-pipe .pipe.flow-status.failed {
+	color: var(--text-error);
+}
+.agg-wb-pipe .pipe.flow-meta {
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+/* =============== 分区折叠（①~⑦ 都可点开/收起） =============== */
+
+/* 标题行：整行都是热区，箭头 + 名称左右排 */
+.agg-pipe-sec .agg-pipe-sec-title-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	user-select: none;
+	padding: 4px 6px;
+	margin: -4px -6px;
+	border-radius: 4px;
+	transition: background 0.15s ease;
+}
+.agg-pipe-sec .agg-pipe-sec-title-row:hover {
+	background: rgba(0, 0, 0, 0.04);
+}
+body.theme-dark .agg-pipe-sec .agg-pipe-sec-title-row:hover {
+	background: rgba(255, 255, 255, 0.05);
+}
+/* 标题升级：14px 加粗 + 正常前景色（原来是 11px 全大写灰字，截图反馈太弱看不清）。
+   只作用于流水线分区内部，别处复用 .agg-section-title 的卡片标题不受影响 */
+.agg-pipe-sec .agg-pipe-sec-title-row .agg-section-title {
+	padding: 0;
+	flex: 1;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--text-normal);
+	text-transform: none;
+	letter-spacing: 0;
+}
+
+/* 折叠箭头：默认朝右 ▶，展开时旋转 90° 朝下；用交互主色提示「可点」 */
+.agg-pipe-sec .agg-pipe-sec-caret {
+	display: inline-block;
+	font-size: 13px;
+	color: var(--interactive-accent);
+	transition: transform 0.2s ease;
+	transform: rotate(90deg);
+}
+.agg-pipe-sec.collapsed .agg-pipe-sec-caret {
+	transform: rotate(0deg);
+}
+
+/* body 用 grid 0fr 技巧：真正的高度收缩，比 display:none 平滑
+   body 里有且仅有一个 .inner 子节点，作为唯一的 grid item —— 行数固定，动画干净 */
+.agg-pipe-sec .agg-pipe-sec-body {
+	display: grid;
+	grid-template-rows: 1fr;
+	transition: grid-template-rows 0.2s ease;
+	overflow: hidden;
+}
+.agg-pipe-sec.collapsed .agg-pipe-sec-body {
+	grid-template-rows: 0fr;
+}
+.agg-pipe-sec .agg-pipe-sec-inner {
+	min-height: 0;
+	overflow: hidden;
+	/* 旧版 .agg-pipe-sec 靠 flex gap:8px 撑开内容间距；内容挪进 inner 后在这层补回同一节奏 */
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+/* 视觉风格下拉：专用类，不挂 .dropdown / .agg-input ——
+   Obsidian 的 .dropdown 箭头 SVG 背景会被 .agg-input 的 background 简写重置成
+   repeat 平铺，整行渲染成一排「◇」。这里 appearance:none + 自绘单枚箭头，
+   no-repeat 锁死，跟主题的 chevron 彻底解耦。 */
+.agg-pipe-style-select {
+	appearance: none;
+	-webkit-appearance: none;
+	width: 100%;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 7px;
+	background-color: var(--background-primary);
+	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 10px center;
+	color: var(--text-normal);
+	font-size: 12.5px;
+	padding: 6px 28px 6px 10px;
+	font-family: inherit;
+	outline: none;
+	cursor: pointer;
+}
+.agg-pipe-style-select:focus {
+	border-color: var(--interactive-accent);
+}
+.agg-pipe-style-select option {
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+/* =============== ② 生成流程：运行信息头 + 总进度条 =============== */
+
+/* 信息头一行四项：项目短码 / 启动时刻 / 已用时长 / 总进度百分比（右对齐） */
+.agg-pipe-runmeta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px 14px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.agg-pipe-runmeta-item {
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.agg-pipe-runname {
+	color: var(--text-normal);
+	font-weight: 600;
+}
+.agg-pipe-runpct {
+	margin-left: auto;
+	color: var(--interactive-accent);
+	font-weight: 600;
+}
+
+/* 总进度条：8px 圆角轨道 + 强调色填充，填充层带一道往复扫过的高光，跑起来有「活着」的感觉 */
+.agg-pipe-overall {
+	position: relative;
+	height: 8px;
+	border-radius: 4px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
+}
+.agg-pipe-overall-fill {
+	position: relative;
+	height: 100%;
+	border-radius: 4px;
+	background: var(--interactive-accent);
+	transition: width 0.4s ease;
+	overflow: hidden;
+}
+.agg-pipe-overall-fill::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(255, 255, 255, 0.28),
+		transparent
+	);
+	animation: agg-pipe-sheen 1.8s linear infinite;
+}
+@keyframes agg-pipe-sheen {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
 }

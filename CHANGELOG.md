@@ -5,6 +5,440 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/)；版本号与 `manifest.json` 严格一致。
 
+
+## 0.17.30 — 离线 TTS 三引擎上线 + 仓库清理与测试收口（2026-10-27）
+
+### Added
+
+- **离线 TTS 三引擎正式上线**：system-tts（系统语音）/ custom-tts（自定义音色）/ moss-tts（MOSS-TTS-Nano 本地神经引擎，Apache-2.0 / CPU ONNX / 音色克隆）。本地化引擎无需联网即可配音，详见 `doc/66-tts-porting-plan.md` 与 `doc/67-moss-integration.md`
+
+### Changed
+
+- **仓库清理**：移除白板 / 视觉概念调试期的一次性原型与实验脚本（`tmp/` 12 文件 ≈ 3.5 MB + `tmp_patch_ui.mjs`）；清理 gitignore 构建缓存（`test/.tmp/` 14 MB 等，可由 `npm test` 再生）。`dist/`（16 MB，含历史发版 zip 与 `language-vip8/`）按指示**保留**
+- **GBK 编码污染修复**：`README-cn.md`、`doc/67-moss-integration.md` 由 GBK 转 UTF-8（GitHub 不再乱码）。`release/opensource.ps1` / `.sh` 同为 GBK 但属脚本，暂不转码（编码兼容风险）
+
+- **历史 Unreleased 收口（原 `[Unreleased] — 短剧（简化版）系统提示词配置（2026-10-23）`）**：下列条目均已实现，并入本版发布说明
+- **短剧（简化版）定妆提示词模板统一到 Settings**：面板角色卡上的「提示词」textarea 已移除（看着像 system prompt 但实际是 per-character image prompt，改了也会被下一轮覆写）；定妆出图模板挪到 Settings → 短剧（简化版）→ 定妆出图模板，四类（leads/supports/scenes/props）共用同一模板，`{name}` / `{desc}` 占位符运行时替换。留空走内置 `castingPrompt()`（按四类各自生成贴合画幅的设定板布局）。新增字段 `dramaCastingPromptTemplate`（默认 `''`）、`buildCastingPrompt()` helper、`dramaPromptSection` Settings 面板、`填入示例` 按钮。界面只保留「描述」字段（per-character user prompt）
+- **短剧（简化版）LLM 系统提示词配置（v0.17.22 补充）**：Settings → 短剧（简化版）新增三个 LLM system 提示词 textarea：大纲（`dramaOutlineSystemPrompt`）/ 剧本（`dramaScriptSystemPrompt`）/ 分镜（`dramaStoryboardSystemPrompt`），各带「填入内置」按钮。留空走内置 `OUTLINE_SYSTEM` / `SCRIPT_SYSTEM` / `STORYBOARD_SYSTEM`；非空则整段替换 system prompt 主体，动态载荷由代码自动拼在尾部。`pipeline.ts` 三处 `callTextModel` 调用点改造为读取 Settings 覆盖值
+- **Settings 红果 Pro 提示词并入主分区**：「短剧提示词」从独立可折叠区块改为「红果短剧 Pro」主分区的子节，与项目根目录 / 每集镜数 / 单镜秒数 / 视频 KEY 池 / 阶段确认同属一个面板
+- **Settings「工作区标签栏」「VIP 状态」默认折叠**：之前两个分区硬编码永远展开，现改为跟随 `settingsCollapsedByDefault` 默认折叠状态
+- **短剧（简化版）默认镜数 6 → 10**：`PipelinePanel` 的镜数输入框默认值与解析 fallback 都改为 10，与红果短剧 Pro 的 `proShotCount` 默认值对齐（6 镜对多数短剧时长偏短）。范围仍是 min=2 / max=20
+- **构建启用 `charset: 'utf8'`**：`esbuild.config.mjs` 新增一行，消除非 ASCII 文案被转义成 `\uXXXX` 的膨胀，`main.js` 1948.5 KB → 1673.7 KB（-274.8 KB / -14.1%）。同步修正 `check-preview-bundle.mjs` 中硬编码的 ascii 转义断言，改为直接匹配真实中文
+- **品牌资产改为「内联 SVG + DOM 文字」**：`src/ui/brand.ts` 两张 base64 PNG（图标 18.5 KB + 文字标 17.9 KB，内联合计 47.5 KB，占该文件 98%）改为四角星芒 SVG（含柔光 / 斜向细芒 / 中心辉光）+ `Free AI Studio` 文本（`background-clip:text` 紫→青渐变）。`main.js` 再降 45.8 KB（-2.73%），零运行时文件依赖、发布清单仍是 4 个文件
+- **VIP 8 包从 `main.js` 剥离、改为运行时按需加载**：8 个 VIP 增量语言包（日/韩/俄/阿/印/西/法/德）不再是编译期静态 import，改为运行时从插件目录 `locales/<locale>.json` 读取（`bridge.ts` 的 `loadVipCatalog()`，仅对当前 locale 加载，文件缺失静默走 `en-US → zh-CN` 回退链）。真相源仍是 `src/i18n/<locale>.ts`，由新增 `scripts/gen-locales.mjs` 在 build 时生成 JSON；`release/package.mjs` 的发布清单同步纳入 `locales/*.json`。`main.js` 再降 114.7 KB（-7.04%，累计 1948.5 → 1513.3 KB / -22.36%）。VIP 门禁 `isLocaleLocked()` 不变，授权强度不受影响
+- **VIP 语言包支持 GitHub 热更新（架构增强，不改产物体积）**：在 S2 剥离的基础上，新增 `src/i18n/localeSyncCore.ts`（纯逻辑核：版本比较 / JSON 解析 / sha256 校验，无 `obsidian` 依赖、可 node 单测）与 `src/i18n/githubSync.ts`（用 Obsidian `requestUrl` 异步拉取公开仓库 `raw.githubusercontent.com` 上的 `manifest.json` + 语言包）。`bridge.ts` 的 `loadVipCatalog()` 改为「同步读 zip 内置兜底（桌面首屏即时注册）+ 异步 GitHub 更新」：仅在当前 VIP locale 有更新时下载、写缓存（插件 `data.json`，跨平台 → 移动端也能加载 VIP 语言）、重注册并刷新视图；离线 / 限流 / 校验失败一律静默走本地兜底，绝不白屏。仅 VIP 8 包走远程，底座 zh-CN/en-US 永远内置保"永不空文案"契约。`scripts/gen-locales.mjs` 新增 `--publish` 产出 `dist-locales/{manifest.json, locales/*.json}`（含每包 sha256 + 单调递增 build），推到语言包仓库即生效；`LOCALES_REPO` 常量需改成你自己的仓库。新增 `npm run test:locales` 单测纯逻辑核
+- **VIP 语言包改为纯远程（移除插件内置兜底）**：S5 的「zip 内置兜底 + GitHub 热更新」改为纯远程——插件 zip 不再包含 `locales/*.json`（节省约 119 KB），VIP 语言完全依赖 GitHub 热更新 + `data.json` 缓存；离线 / 首屏联网前显示 zh-CN/en-US 回退文案，联网后自动修正为母语，移动端行为不变。`bridge.ts` 移除 `pluginDir()` / `readBundledVipJson()` / `parseVipJson()`；`release/package.mjs` 发布清单回退为 4 个核心文件。`scripts/gen-locales.mjs` 不再生成插件内 `locales/`，改为把发布产物直接落到本地 `dist/`（manifest + 8 包），并额外产出 `dist/language-vip8-<ver>.zip` 供人工下载（运行时仍拉松散文件）
+- **语言包仓库配置落地为真实地址 + 语言包收进 `dist/language-vip8/`**：`src/i18n/localeSyncCore.ts` 的 `LOCALES_REPO` 由占位 `agnes-ai-studio/agnes-locales` 改为真实公开仓库 `xiaosong8584/free-ai-studio`（branch `main`，子路径 `dist/language-vip8`）；`LocalesRepo` 新增 `path` 字段，`rawBase()` 据此拼出 `…/main/dist/language-vip8/manifest.json` 与 `…/main/dist/language-vip8/locales/<locale>.json`，`githubSync.ts` 的 `repoKey()` 同步带上 path。`scripts/gen-locales.mjs --publish` 产物收进 `dist/language-vip8/`（manifest.json + locales/*.json），与插件 zip/assets 在 `dist/` 下分属不同子目录——本地 `dist/` 即远程 `free-ai-studio/dist/` 的镜像，整体推上去即生效。约定：插件源码仓库 `agnes-ai-studio-obsidian` 仅本地开发、**永不 push**；发布物（插件包 + 语言包）统一进 `free-ai-studio` 仓库的 `dist/`。`test/locale-sync.test.mjs` 的 raw 地址断言同步更新
+- **白板渲染动画引擎锁定 VIP only + 三个模块默认开启（v0.17.23）**：`src/vip/gate.ts` 的 `VIP_ONLY_COMMANDS` / `VIP_ONLY_TABS` 补登记 `open-whiteboard` / `whiteboard`——此前 `main.ts` 虽用 `addVipCommand` 包装了该命令，但清单漏登记导致 `isCommandLocked` 判 false，**非 VIP 用户实际能直接打开白板**（真锁漏洞，不是纯文案）；现已命令 + 标签双锁，非 VIP 看不到入口、命令弹激活窗。`src/settings.ts` 的「白板渲染动画引擎」分区从普通 `section()` 改为 `vipSection()`（与其他 VIP 分区一致带 🔒）。`src/core/tabPrefs.ts` 的 `DEFAULT_VISIBLE_TABS` 由 6 项扩为 9 项，补入 `whiteboard`（VIP 锁，非 VIP 自动过滤）/ `gallery` / `log`——新用户与「重置」用户默认开启这三个模块。README 的 VIP 披露表同步新增 Whiteboard 行、免费列表移除 Whiteboard Animation。`test/vip-ad.test.mjs` 双锁循环列表补 `whiteboard`；`test/tab-prefs.test.mjs` 默认集断言同步为 9 项：`dist/` 分层原则明确为「根目录只放发布资产（插件 zip + 语言包 zip + `assets/`），只有运行时逐个拉取的松散文件才收进 `language-vip8/` 子目录」，故 `language-vip8-<ver>.zip` 从 `dist/language-vip8/` 上移到 `dist/` 根（运行时地址不变，`LOCALES_REPO.path` 仍为 `dist/language-vip8`）。新增 `release/package.mjs` 的 `[4/5] 语言包体积评估`：按 locale 打印 raw / gzip / key 数 / 预算占用，并给出与插件包的体积对比与「单设备实际下载 ≈ 平均 gzip 大小」；预算为单包 ≤ 40 KB、合计 ≤ 200 KB（软闸门，超限告警不阻断）。`scripts/gen-locales.mjs` 同步打印 gzip 体积与预算结论。当前实测：8 包 raw 115.2 KB / gzip 38.0 KB / 各 195 keys，合计占预算 58%
+- **语言包同步接入 trace（可观测性补齐）**：`githubSync.ts` 的 `syncVipCatalog()` 此前整条链路静默——用户报「翻译没更新」时无法查证。现每个分支都打点（tag = 语言包）：开始同步（仓库坐标 + 本地缓存 build）、`fresh`（缓存已最新、跳过下载）、`updated`（build + 条目数 + 体积），以及 5 类失败原因（清单拉取失败 / 清单无此 locale / 包下载失败 / sha256 校验失败 / JSON 解析失败），日志面板、`logs/trace-<date>.md`、DevTools 过滤 `[AgnesAI]` 三处均可查；失败仍静默降级不弹 Notice，避免每次启动打扰。**免费语言（zh-CN / en-US / auto）仍在 `isVipLocale` 处短路，零网络请求、零日志**——免费用户看不到任何「语言包」痕迹是预期行为，不是 bug。`bridge.ts` 的 `.catch()` 同样补了异常留痕。新增 `test/build-locale-sync-net-test.mjs` + `test/locale-sync-net.test.mjs`（7 用例，用可控 `obsidian` 桩件按 URL 查表响应并记录实际发出的请求，钉死「免费语言零请求零日志」与「每个分支都有可读原因」两个契约），`npm run test:locales` 已纳入
+- **语言包下载源改为多源自动回退（修「检查语言包更新」永远超时）**：`raw.githubusercontent.com` 在部分网络下是**连接被丢包**而非 404——软超时打满也收不到一个字节，而同一份文件经 `ghfast.top` 反代秒回。单源硬编码等于把「网络可达性」变成插件的单点故障。`src/i18n/localeSyncCore.ts` 新增 `LocaleSourceId` / `LocaleSourceConfig` / `buildSourceUrl()` / `resolveSourceOrder()`（纯逻辑，无 `obsidian` 依赖）：`auto` 依次尝试 **GitHub 直连 → ghfast.top → ghproxy.net → jsDelivr**，第一个 200 的源**粘住整个会话**（否则 8 个包各白等一次超时，累计 48s）；单源超时由 15s 降到 **6s**（回退场景下 15s×4 会让用户干等一分钟）。`githubSync.ts` 新增 `configureLocaleNet()`（`main.ts` 在 `initI18n` **之前**注入，配置变更即清粘性源与清单缓存）与 `lastSourceFailures()`；`fetchLocaleManifest` / `fetchLocalePack` 改为「拿文本 → 自己 `JSON.parse`」，反代把 502 用 200 包成 HTML 时判为**解析失败**而不是笼统的「离线」。失败原因（`GitHub 直连: 超时（6s）` / `ghfast.top: HTTP 502` …）经 `CatalogCheck.sourcesTried` 一路报到设置页报告面板——只说「离线」的话用户分不清是本地断网、被墙、还是仓库没就绪，而三者处置方式完全不同。Settings → 界面语言新增「语言包下载源」下拉与「自定义镜像前缀」输入（`localeSource` / `localeMirror` 两个新字段，默认 `auto` / `''`）。`test/locale-sync-net.test.mjs` 从 17 例扩到 **25 例**（URL 形态、custom 缺前缀回落 auto、5xx 回退并留痕、粘性源不重试官方源、四源全失败逐条上报、200+HTML 判解析失败），并修了测试桩件「只给 `json` 不给 `text`」的失真（真 `requestUrl` 总是返回 text）
+- **修「文件明明推上去了，插件还是一直 404」——CDN 缓存了推送前的 404**：实测同一条 `dist/language-vip8/manifest.json`，`api.github.com` 能列出、带 `?t=` 的地址立刻返回真内容，而**不带参数的 raw 地址长期 404**（用户越早试过一次，越容易种下这个缓存）。`githubSync.ts` 新增会话级 `SESSION_BUST` 令牌与 `fetchOnce()`：清单请求拿到 **404 时补一次带 `?t=<令牌>` 的穿透重试**，成功即在 trace 写明「CDN 缓存了旧结果」。只在 404 这种失败路径上多花一个请求，正常路径的 URL 一个字都不改（CDN 命中率不受影响）；补一次就够，不做无限重试。这是与「多源回退」互补的另一层：多源解决「网络到不了」，穿透解决「到了但被缓存骗了」
+### Fixed
+
+- **测试全亮（2157/2157，0 失败）**：修复 8 项失败——`mossService.ts` 2 处看门狗违反 killTree 纪律（`child.kill` → `killProcessTree`）、`remove-gec-v2.mjs` P2 摘除链锚点被 v0.17.18 的 4 个 locale 构建步骤断开、2 个测试过时（`moss.test.mjs` 用错 `resolveMossSidecarPath` 签名、`whiteboard-stroke-reveal.test.mjs` argv 契约窗口过小）；回接 6 个孤儿测试（`casting-category` / `explain-run-progress` / `moss-install` / `top-ad-slot` / `whiteboard-ink` / `whiteboard-stroke-reveal`），全部功能仍在、0 删除
+
+### Housekeeping
+
+- **版本号统一**：`manifest.json` / `package.json` / `versions.json` 由 0.17.29 升至 **0.17.30**，消除此前版本文件（0.17.29）与文档（v0.17.30）的不一致
+
+---
+
+## 0.17.29 — 设置页分区展开态跨重绘记忆（2026-10-25）
+
+### Fixed
+
+- **设置页分区「点开又自动折上」的真相：没有超时，是页面重建**：全 src 排查证实设置页只有两个定时器（切语言后 `setTimeout(..., 0)` 重绘、ffmpeg 防抖 900ms），都与折叠无关。分区是原生 `<details>`，`open` 状态**不持久**——每次 `display()` 重建 DOM 全部分区回到默认折叠；而重建路径有 10 处（Obsidian 显示设置 tab、切界面语言、改默认折叠开关、VIP 激活弹窗关闭、重置标签等）。用户体感「自动折叠」= 中途发生了一次重建
+- **展开态跨重绘记忆（根治）**：26 个分区调用点批量迁移为带稳定 i18n key 的新签名 `sectionK('settings.section.apiKeys', open, fill)`（key 跨语言不变，用 title 文本做 key 会在切语言时失效）；`section()` 增加第 5 参 key，`remembered ?? open` 决定初始态，`toggle` 事件写 `Record<key, boolean>`。存储走 **`app.loadLocalStorage / saveLocalStorage`**（键 `agg-set-section-open-v1`）——刻意不写 data.json：UI 瞬态不该让 settings 文件变大，也不该和 API Key 一起被「重置数据」清掉
+- **改「默认折叠」开关时清空记忆**（`resetSectionOpenState()`）：否则「改成默认展开」会被旧的「记住为折叠」抵掉，看起来开关失效
+- 新增契约测试 `test/section-key-invariant.test.mjs`（2 例）：每个 sectionK 的 key 与 key.desc 必须都在 zh-CN / en-US 有词条——key 是运行时拼的，拼写错误 tsc 查不出，症状是分区标题显示成 key 原文。已反向验证（故意改错一个 key → 立刻报红）
+
+### Changed
+
+- 「默认折叠」开关文案补一句「展开/折叠选择会被记住，重建设置页后恢复」
+
+## 0.17.28 — 修「语言包装好了但切换无效」：setLocale 与注册的时序错位（2026-10-25）
+
+### Fixed
+
+- **`setLocale()` 只对已注册的 locale 生效，未注册时静默返回当前值**（`test/i18n.test.mjs` 明确断言「未注册不生效」）。旧 `initI18n` 顺序是 `resolveLocale()`（内含 setLocale）→ `loadVipCatalog()`（这才 registerMessages）——启动时 catalogs 里只有 zh/en，`setLocale('ko-KR')` 被静默丢弃 → `resolved.locale` 回落 zh-CN → `isVipLocale('zh-CN')` 为 false → **连包都不去加载**。主流程不报错、不抛异常、日志正常，只是结果永远不对。修复 = 分层：`planLocale()`（只决策）→ `registerMessages(target, {})` 空字典占位（固定用户选择，缺失键走 en-US→zh-CN 回退）→ `loadVipCatalog` → `commitLocale()`（写核心）。包没下完也不丢选择，下完自动变母语
+- **缓存优先（第二个问题）**：旧 `loadVipCatalog` 在勾选自动更新时**直接走网络**，本地缓存明明在也要等一次清单往返（1~12s）才注册，断网时更是「有包却退回中英」。改为先 `storage.read()` 装缓存同步生效，再 `void syncVipCatalog()` 后台热更新——「零网络生效」成为所有「本地已有缓存」路径的默认设计
+- 修正两处假路径文案：设置页写的覆盖目录 `obsidian/插件id/languages/` 是从不存在过的（0.17.24 已把 languageDir 改名 `localeOverrideDir()` 指真实路径 `language/overrides/`，但文案没同步）
+
+### Added
+
+- 新增 `test/build-bridge-locale-test.mjs` + `test/bridge-locale.test.mjs`（7 例，obsidian / adapter 双桩，storage 走**真实** `createLocaleFileStorage`），钉死「缓存命中 / 冷启动 / autoUpdate=false」三条回归。已验证有效性：把 initI18n 临时改回旧顺序 → 3 条回归立刻红
+
+## 0.17.27 — 语言包下载：并发竞速测速选最快源 + 超时分层（2026-10-25）
+
+### Fixed
+
+- **「地址固定却时而成功时而失败」的根因：超时比源的真实延迟还短**。curl 实测（语言包 14 KB）：GitHub 直连被墙、ghfast.top 25s 无响应、**ghproxy.net 双峰分布**（代理站按文件缓存：命中过的 1s 内返回，从未缓存的回源 3~12s）、jsDelivr 连接中止、gh-proxy.com 4.7s。上一版把超时定在 6s 正好横切回源峰值——**清单（1KB 早缓存，1s 返回）能拉到、包（14KB 未缓存，5~12s）全失败**，日志里写的「超时（6s）」全是阈值误杀
+- **超时按用途分档**：探测/清单 8s、语言包 20s。单用一个值套所有文件类型就是这次事故的根因
+- **串行回退 → 并发竞速**：5 个候选源同时发请求，`firstSuccess` 取最先拿到正文的那个，总耗时 ≈ 最快源自身耗时，不再为黑洞源付全额超时
+- **最快源按「仓库+路径族」分别粘住**：jsDelivr 是 manifest 通、包不通，用一份记忆表示「两类文件都通」是把两件事混成一个假设
+- **single-flight 锁**：4 路并发下载时只允许第一个请求去测速，其余等结果，否则 4 个包 × 5 个源 = 20 个并发会被代理限流
+- **批量下载限并发 4**（原来 8 个串行 40s+）
+
+### Added
+
+- 候选池新增 **gh-proxy.com**（实测可用 4.69s，之前不在池内）；`AUTO_SOURCE_ORDER` 扩为 5 源：`raw / ghfast / ghproxy / gh-proxy / jsdelivr`，新源只作 auto 内部候选（并发竞速下用户无需手选具体镜像）
+- 真实网络端到端验证（Obsidian 请求层换真实 fetch 跑完整「拉清单 + 下 8 包」）：修复前 34s 时已失败 2 个、最终 0 成功；修复后 **8/8 成功，2.9s / 7.8s / 20.3s（连跑三次）**
+
+## 0.17.26 — 语言包离线闭环：全源失败给上传入口 + 导出本机语言包（2026-10-25）
+
+### Added
+
+- **全源失败时报告面板直接给按钮**：以前只写一句「远程清单拉取失败」，用户无法处置。现在 `renderOfflineReport` 渲染本地已缓存语言、逐源失败原因（含网络错误码与超时），并给出可点的 **「选择离线语言包 zip」**——直接走已有安装链路（解包 → 比对 build → 确认 → 写缓存），全程零网络
+- **新增「导出本机语言包」**：`language/` 缓存可打回 zip 落 vault 根目录 `language-vip8-backup-<build>.zip`。补齐离线搬运闭环：能联网的机器装好 → 导出 → 拷到离线机器上传安装。打包器 `packLocaleZip` 零依赖（store 不压缩），结构与发布件一致（manifest + locales/*.json，带 build 与 sha256）；写盘走 adapter 的 **vault 相对路径**
+
+## 0.17.25 — VIP 启动补齐缺失语言包（2026-10-25）
+
+### Fixed
+
+- **启动自检故意不补齐没装过的包**：`autoSyncLocalePacks` 的过滤器 `cachedAll.includes(l) && l !== skipLocale` 只更「已缓存过」的语言包——缓存为空时 8 个 missing 全被排除，一个请求都不发就退出（日志还写着「当前界面语言为内置语言，无需下载」，误导）。改为 `actionable.filter((l) => l !== skipLocale)`：VIP 用户勾选自动更新后，启动即把 8 个包拉齐，之后选任何 VIP 语言都走缓存命中，不再依赖那一下联网是否成功
+- 日志拆成「更新 N / 补装 M」，一眼区分拉新与升级；`cachedAll` 为空且远程也无待补时提示「远程也无待补，无需联网」，不再误导
+
+## 0.17.24 — 语言包缓存外置到 language/ 目录 + 修 saveData 覆盖 bug（2026-10-25）
+
+### Fixed
+
+- **`Plugin.saveData(x)` 是整文件覆盖，不是合并**：`settings.ts` 有 7 处 `saveData(plugin.settings)`，payload 里没有 `localeSync`——导入语言包写进 data.json 后，用户改任何一个设置（三个语言控件本身就在这些路径上）就把语言包静默抹掉，下次启动重新联网拉 8 个包。这也解释了「感觉它老在重新下载」
+- **同一批调用还绕过 `encryptSettingsFields`**：API Key 一直是明文落盘。7 处全部改为 `saveSettings()`（read-modify-write + 加密封装）
+- **`bridge.ts` 的 `languageDir()` 返回占位串** `obsidian://<id>/languages`——不是 adapter 路径，「放个 json 覆盖文案」这个能力从来没生效过（读不到文件静默返回 null）。已改名 `localeOverrideDir()` 指向真实的 `language/overrides/`
+
+### Added
+
+- **新增 `src/i18n/localeFileStore.ts`**：语言包缓存外置到 `<vault>/.obsidian/plugins/free-ai-studio/language/`（`manifest.json` 清单 + `locales/<locale>.json` 每语言一个 ~14KB + `overrides/<locale>.json` 用户手写覆盖），实现的是同一个 `LocaleSyncStorage` 接口——`githubSync.ts` / `bridge.ts` 一行没动，换存储只是换实现。data.json 从 ~130KB 瘦回几 KB（8 包占其 80%~95%），改开关不再重写 127KB，删 language/ 只丢可再生缓存、VIP 激活态与 API Key 不受影响
+- **manifest 最后写（提交点）**：先写包文件再写清单——万一清单写挂，状态是「清单旧、内容新」下次重下；反过来就是「清单说新、内容旧」永远不更新的死局
+- **一次性迁移**：`main.ts` 启动时把旧 data.json 里的 `localeSync` 搬到 language/ 再清空（文件里已有缓存则不覆盖，文件那份更新）；目录不可写时回落 data.json 并打 trace，功能不哑掉
+- 新增 `test/locale-file-store.test.mjs`（14 例：目录布局 / 往返一致 / 坏包跳过 / 清单提交点 / 旧包清理 / 回落留痕 / 三种迁移分支）
+
+---
+
+## 0.17.21 — 解说篇动画面板 + 图片水印/批量开关/短剧提示词治理（2026-10-21 ~ 10-23）
+
+> 设计动机与踩坑详情见 `doc/34-explainer-panel.md`「Step N+4」；Remotion 侧改动见其仓库
+> `docs/02-架构与工作原理.md` §11。
+
+### Fixed
+
+- **成片字幕重叠（三根因，渲染前质检结构性盲区）**：章节卡补 `!isInLead` 守卫；章节卡 1.2s 窗口内新增 `suppressText` 屏蔽字幕 / MG / 字幕条三层（11 处引用）；MgRail 有 compact 标题层时轨道 y 118→250，避开字幕置顶区 y56–242
+- **元素震动 / 浮动时光晕框不贴合**：FxOverlay camera 层复用 `applyMotion` 纯函数，HeroGlow/GlowBlob/HaloRing 跟随主体位移；`computeHeroPos` compare 分支常量与 MgCompare 面板逐值对齐（cy/boxH 曾差 20px/40px）
+- **目标 30s 成片 103s（时长设定"没生效"）**：根因是模型把作业过程写进输出——378 字中 291 字是「字数核算 / 镜头拆分 / 时长估算 / 修正重写」元信息，被当成字幕导致 8 镜膨胀成 20 镜。三层修复：解析层 `stripNarrationMeta` 清洗（实测 20 镜→2 镜、103s→19.5s）+ 提示词禁令 + 流水线 ±50% 时长硬闸（出图前停止，不再白烧算力）
+- **商汤模型 img2img 图片水印（`imgToImgStage1` 漏传 `watermark:false`）**：文生图路径早已有 `payload.watermark = false`（`generateImageStage1`），图生图路径漏了——用户报障「商汤模型出图有水印」时，代码里的 `watermark:false` 只覆盖了文生图。补上 `imgToImgStage1` 的同等逻辑，并统一走 `isSenseNovaModel()` 判断（不再 inline `startsWith('sensenova')`，与 `providers.ts` 的 `isSenseNovaModel` 收口同源），两处均加 debug 日志 `→ 商汤去水印 payload: {...}` 便于在 Obsidian Console 排查
+- **商汤 SenseNova 图片尺寸不合规（1280x720 / 720x1280 → HTTP 400）**：官方 API 硬约束「宽高必须是 32 的倍数、范围 512–4096、最大比例 3:1」，但 `IMAGE_SIZES_DEFAULT` 里塞了 `1280x720` / `720x1280`（720/32=22.5，不合规）——视觉上很像"合规尺寸"，实际请求 400。新增 `IMAGE_SIZES_SENSENOVA`（训练桶 + 安全尺寸），`getImageSizesForModel()` 按模型分流
+
+### Added
+
+- **运行进度条（runbar）**：当前阶段 / 开始时间 / 已过时长 / 进度百分比 / ETA；权重归一化（跳过的阶段从分母剔除，不稀释）+ LLM 伪进度上限 0.95；失败 / 停止终态定格（红框 + 错误摘要 + 「查看日志」按钮直达 trace 日志）
+- **画面增强**：素材组「画面增强」按钮 + 自动流水线出图后、配音前自动执行；低对比 contrast 1.28、过暗只提亮、过曝只压亮（eq 的 contrast 绕 128 展开，暗帧上对比度会适得其反）；增强后复测达标才覆写，无效保留原图
+- **重跑清场**：`clearRunState()` 清上一轮运行态、保留用户输入配置
+- **短剧 Pro 系统提示词配置面板**：Settings → 短剧 Pro 新增独立面板「系统提示词」，三个 textarea（剧本 / 分镜 / 定妆）+ 每阶段「填入内置」按钮；空串 = 用内置，避免两处漂移。短剧 UI 界面**不保留**任何系统提示词输入框。字段：`proScriptSystemPrompt` / `proStoryboardSystemPrompt` / `proDesignSystemPrompt`（DEFAULT 均 `''`）
+- **图片批量模式默认关闭 + 状态可视化**：`ImagePanel` 显式 `batchCheck.checked = false`（防未来初始化路径改回去）；checkbox 右侧新增「关 / 开」徽标（`.agg-batch-badge` + `.agg-batch-badge--on`），灰底关 / 主题色底开，一眼看出当前状态，避免 HTML 空 checkbox 被误读为"已启用"。i18n：`image.batchOn` / `image.batchOff`
+
+### Changed
+
+- 「解说片」菜单改名「**解说篇动画**」
+- ShotText 径向暗晕衬底（仅纯文字镜）+ 主文字 / 字幕贴身阴影 `0 1px 3px rgba(0,0,0,0.9)`；Vignette 底带 0.4→0.5
+- **MediaViewer 定妆照预览外框按图片比例自适应**：`.agg-viewer-body` 读 `img.naturalWidth/Height` 算 ratio（`Math.min(4, Math.max(0.25, w/h))` 防极端长条），`img.complete` 同步 / 否则 `load` 事件异步；`.agg-viewer-box` 用 `width:auto` + `max-width/max-height` shrink-to-fit，横图不再被挤扁、竖图不再撑满屏
+- **单行文本框（复用套路）**：白板「主角形象」`.agg-wb-cast-input`、MTV「创作意图」`.agg-mtv-intent-input` 均加 `min-height: 0`，覆盖通用 `.agg-textarea` 的 `min-height:120px`。**通用定则**：任何 `.agg-textarea` 要默认 1 行，rows + CSS 覆盖 min-height 两处一起做，只改 rows 无效
+
+---
+## 0.17.20 — 白板样式预览对照表完善（自动刷新 + 搜索过滤 + 缓存复用）（2026-10-20）
+
+### 本版本新增功能（路线图见 `doc/48-whiteboard-roadmap.md`、迭代复盘见 `doc/50-whiteboard-style-preview-notes.md`）
+
+- **样式预览对照表四种视图**：卡片对比（默认，含 styleBlock / extraPos / extraNeg / 色板详细信息区）、对比表格、缩略图网格、小图密览（minmax(170px,1fr) 一屏更多）
+- **顶部搜索栏**：按样式名 / 英文名 / id 过滤，四视图全支持，保留原始编号，只重建列表区不丢搜索框焦点
+- **缓存复用**：重启 Obsidian 后直接复用 `preview` 目录已有图，不再从 0 重出；逐款循环与快速路径同口径探测（记录路径 + 默认路径 `${id}.png`），命中即标 cached 并顺手记回 JSON
+- **自动刷新**：出图循环推进时对照表随逐款落图实时更新（卡片只重画变过的项），进度行常显「正在生成 i/total：样式名」
+- **复制 JSON**：导出完整 style 数据（非 id 残壳）；统计 chip 增量重建，过滤时追加「匹配 N 款」
+
+### Added
+
+- **样式预览对照表（bug9 → bug14 连续修复，2026-10-19 ~ 2026-10-20）**：面板「预览全部样式」每款艺术样式出一张统一主体预览图（竖版 4:5，1024×1280），新标签页四视图对照。
+  - 卡片对比默认视图：编号 + 大缩略图 + 红 id + 名称 + 英文斜体 + 说明 + 标签 + 色板 + 详细信息区（`cardrow-detail`：styleBlock 全文 / extraPositive / extraNegative / canvasBg+inkColor 色块）
+  - 对比表格：7 列紧凑表（隐藏英文、styleBlock 列）；`td/th` 禁用 `display:flex` 避免错位
+  - 小图密览 `mini` 第四视图：密网格一屏更多缩略图
+  - 复制 JSON 走 `serializeArtStyleJson(r.source)`（完整源对象挂 `WbStylePreviewItem.source`），不再只得到 id 残壳
+  - 缓存快速路径：全缓存跳过出图循环，Notice「全部已缓存」；`vaultPathExists` 判 `adapter.stat` 返回值（Stat|null，不存在返回 null 不抛错）
+  - 按钮卡死修复：外层 try/finally 整体套住 `previewAllArtStyles`，任何出口复位按钮 + 清 abort 引用；统计 chip 由 `renderStatsChips()` 就地重建
+  - 自动刷新修复：`refresh()` 增量只动变过的卡（叶子容器 `cardrow-thumb`，不再 `empty` 整卡）；`appliedKeys` 状态快照避免每 tick 全量重画；进度行常显当前生成进度
+  - 缓存复用修复（bug14）：逐款循环缓存判断与快速路径同口径，重启后导入款 JSON 未记回 `previewImage` 也能命中默认路径 `${id}.png`，不重出图
+- **顶部搜索栏（2026-10-19 反馈）**：标题行内 `input[type=search]`，`filterText` + `matchesFilter`（styleName / nameEn / id 三字段不分大小写）+ `visibleResults()`；`applyFilter()` 只重建列表区、不动头部（焦点不丢）；无命中显示提示行；过滤时统计 chip 追加「匹配 N 款」。i18n 加 `wb.art.preview.searchPlaceholder / filteredCount / noMatch`
+- **i18n**：中英各 +若干 key（`wb.art.preview.viewMini / progressWorking / searchPlaceholder / filteredCount / noMatch / detail.*` 等）；占位符全双花括号
+- **契约测试** `test/whiteboard-style-preview.test.mjs` 36 用例全绿（钉死增量刷新传叶子容器、缓存口径统一、try/finally 结构、搜索只重建列表区等）
+
+### Fixed
+
+- **预览不自动刷新（bug13）**：卡片视图第一次增量刷新把整卡 `empty` 打烂，需手动切视图恢复；改为只重画变过的卡 + 进度行常显
+- **重启后从 0 重出（bug14）**：逐款循环只认 JSON 记录的 `previewImage`，导入款未记回则漏缓存；改为与快速路径同口径探测默认路径
+- **缓存永远误命中（bug12）**：`vaultPathExists` 不看 `adapter.stat` 返回值，目录不存在也报已缓存；改为 `return !!st`
+- **按钮卡「正在生成预览」+ 统计 0/26（bug11）**：快速路径提前 return 绕过 finally；改为外层 try/finally 整体套住
+
+## 0.17.19 — 白板渲染动画完善（逐幕缩略图 + brief.srt 落盘 + 孤儿/配音修正）（2026-10-18）
+
+### 本版本新增功能（路线图见 `doc/48-whiteboard-roadmap.md`）
+
+- **逐幕成果缩略图**：④ 卡片每幕下方出 `<img>`/`<video>` 缩略图，点击弹 `MediaViewer` 全屏预览
+- **brief.srt 落盘**：「自动生成字幕」成功后同步写 `<projDir>/brief.srt`，可在仓库直接查看/编辑/复用
+- **孤儿判定修正**：`brushes/` / `styles/` 共享资源目录永不出现在「无主生成物」清单
+- **配音节奏对齐**：`atempo` 变速后探测人声实际区间，`adelay` 把静音垫在人声前，声贴字幕节奏起播
+- **第二步界面布局**：艺术样式 / 画笔配置各拆成一张卡片；画笔缩略图可点放大；需求框补常驻说明；
+  新增「导入样式模板」按钮（JSON 粘贴 → 校验 → 落 Vault，三层来源：内置 → 引擎目录 → 本库）
+- i18n：中英各 +23 key（`wb.scene.thumbHint` / `wb.brief.srtSaved` / `wb.art.*` 系列），占位符全双花括号
+
+### Added
+
+- **逐幕成果缩略图 + 点击放大预览**（2026-10-18 用户报障「每一步完成以后，下面应该显示成果的缩略图，点击缩略图能预览」）：
+  ④ 逐幕制作卡片里，每幕的 chips 行下方新增一行 `.agg-wb-scene-thumbs`——
+  `imagePath` 有值出 `<img>` 缩略图（72×52，4:3，`object-fit:cover`），`videoPath` 有值出
+  `<video>` 缩略图（16:9，`preload=metadata` + muted）；标注（`annotationPath`）是 JSON 配置
+  无独立缩略图，仍以「标注」chip 的 ✓ 状态为准。点击缩略图弹 `MediaViewer` 全屏预览
+  （图片可缩放/平移、视频直接播放，与 Gallery/Mtv 面板同款查看器）。取图走
+  `resourcePath(app, path)`（`adapter.getResourcePath` → `obsidian://` 协议），与面板内
+  其他 `<img>` 一致。缩略图读 `storeScene.imagePath/videoPath`，换艺术样式/画笔的
+  `invalidateFor*Change` 清掉这些字段后 `renderSceneList` 重绘自动消失，无竞态
+- **「自动生成字幕」同时落一份 `brief.srt` 到项目资产目录**（2026-10-18 用户要求
+  「点击自动生成字幕，应该同时在仓库保存一个 srt 文件」）：`generateBrief`（独立按钮）与
+  `oneClickFinal`（前置「需求 → SRT」）两处成功后都调 `saveBriefSrt(r.srt)`，写到
+  `<projDir>/brief.srt`（`WB_BRIEF_SRT_NAME` 常量，与线稿/标注/单幕命名同口径——
+  确定性文件名，反复生成覆盖旧文件，不累积）。文件随项目资产目录生命周期，删除项目时
+  整棵 `rmdir` 同删，无需改删除逻辑。落盘失败静默（SRT 已写进 `project.srtText` + 项目 json，
+  落文件只是增强不阻断流水线）。i18n 加 `wb.brief.srtSaved`（zh/en 各 +1）
+
+- **孤儿清理不误伤共享资源目录**（2026-10-18 用户报障「新增的画笔目录被 Project
+  识别为无主生成物、提示删除」）：根因是 `listOrphanWhiteboardAssetDirs` 只排除了
+  `projects/`——`_Agnes/whiteboard/` 下的子目录全按「项目资产目录」判定，而
+  自定义画笔 `brushes/`（whiteboardBrushes 的 Vault 落盘位置）与本库导入的艺术样式
+  模板 `styles/`（whiteboardStyles 的 Vault 落盘位置）是**跨项目共享资源**，没有
+  项目 json 对应，于是被判成「有目录无 json」的孤儿并提示删除。修正：判定循环里把
+  `projects` / `brushes` / `styles` 一律排除（永不判孤儿）；测试
+  `whiteboard-store-delete` 新增用例钉住该行为（brushes/styles 盘面不出现在孤儿清单，
+  真孤儿 test05 仍被认出）
+- **配音节奏对齐画面/字幕（修复「声音远快于画面」报障）**（2026-10-18 用户反馈
+  「whiteboard-final.mp4 声音比较奇怪，远远快于画面和字幕，不同步」）：根因不是
+  播放倍速、也不是合并音画不同长（成片音轨 199.98s / 画面 200.00s，逐幕对齐全部精确），
+  而是**配音的对齐策略与字幕节奏错位**：旧实现 TTS 合成后直接 `atempo + apad` 顶在
+  每幕 0 点播出，而字幕按 4s/条匀速——幕 1 原声 9.9s，32s 的幕里播完 8 条字幕后剩
+  22s 空场，人声「相对字幕快完了一大截」。修复：变速后先落临时文件，用 0.05s 滑窗
+  幅度探测人声实际区间，把静音**垫在人声之前**（`adelay`），人声贴住字幕节奏起播、
+  尾部补静音；TTS 比幕还长（atempo 到 2.0 仍塞不进）时不垫、顶头播出宁可尾句被截
+  （垫了会被 `-t` 裁尾，比开头空 30s 好）；探测失败 / 无 Node 运行时回退旧行为。
+  探测用的 Node fs 走 `ws.nodeRequire`，移动端无运行时不影响主流程
+- **第二步界面布局修正 + 艺术样式可导入 JSON 模板**（2026-10-18 用户反馈「界面布局
+  问题 bug6：① 艺术样式分为一组、画笔配置分为一组；② 铅笔画的缩略图点击无法预览；
+  ③ 提示词生成字幕的输入框缺少说明；④ 艺术样式缺少 import 按钮，导入 Json 格式的
+  样式模板，功能」）：
+  ① **两个下拉拆成两组卡片**：新增 `.agg-wb-style-group`（描边 + 圆角 + 底色），
+  艺术样式组（下拉 + 导入 + 删除 + 该组说明行）与画笔配置组（下拉 + 缩略图 + 新增 +
+  删除 + 该组说明行）各自成块——原来两个下拉挤同一行、样式说明行挂在两个下拉后面
+  看不出属于谁的问题一并解决；
+  ② **画笔缩略图可点放大**：`refreshBrushPreview` 把 data URL 缓存进
+  `this.brushPreviewUrl`，缩略图加 click 监听弹 `Modal` 看大图。内置素材在 Vault 外
+  （引擎目录），`MediaViewer` 只认 Vault 路径，所以直接喂 data URL 不走 MediaViewer；
+  ③ **需求框补常驻说明**：placeholder 是灰色浮字、不占位、清空即消失，用户看不出这格
+  该写什么 → 框下加一行 `wb.brief.help`（写清「讲什么 + 讲给谁 + 多久」；留空则沿用
+  字幕框内容不改写）；
+  ④ **新增「导入样式模板」按钮**：`ArtStyleImportModal` 粘贴 JSON →
+  `diagnoseArtStyleJson` 给**具体原因码**（jsonInvalid / missingStyleBlock / badId /
+  tooLarge…）→ 弹窗按码显示文案、**失败不关窗**可改完重试（与 BrushAddModal 同口径）
+  → `importArtStyleJson` 写入 `{outputFolder}/whiteboard/styles/<id>.json`（逐级 mkdir，
+  `adapter.write` 不自动建父目录）。样式来源从此**三层**：内置 → 引擎目录 `assets/styles/`
+  → Vault `whiteboard/styles/`，同 id 后一层覆盖；`mergeArtStyles(external, base)` 加
+  第二个参数、缺省仍为内置，老调用点零改动。存 Vault 而不是引擎目录的理由与自定义画笔
+  相同——引擎目录是可替换外挂包、重装即丢。配套 `listVaultArtStyles` /
+  `removeVaultArtStyle`，「删除此样式」只删本库导入的那份（内置与引擎目录的样式给不了删，
+  引擎目录那份是用户自己维护的资产）。i18n 中英各 +22 key（`wb.art.import*` /
+  `wb.art.del*` / `wb.art.err.*` / `wb.brief.help` / `wb.brush.hint` /
+  `wb.brush.previewTip` / `wb.brush.previewHint`）
+- **项目生命周期界面同步 + 一键成片包含「生成字幕」步**（2026-10-18 用户反馈
+  「新建项目时界面上历史数据应该清空，特别是 Step3 的内容；切换已有的项目时，
+  旧的项目数据应该载入；一键成片按钮应该包含第二步生成字幕的步骤；
+  生成字幕→自动生成字幕」）：
+  ① **新建 = 空白 slate**：`createProject` 不再把 `srtInput` 的旧文本塞进新项目
+  （旧实现如此，第三步分幕表整个还是上个项目的），需求框/字幕框/分幕目标一并清空，
+  执行日志/进度条/状态行/逐幕渲染态由新增的 `clearRunUi()` 统一收起；
+  ② **切换/删除 = 全量载入 + 清瞬时 UI**：`loadProject` 补同步第三步「分幕目标时长」
+  输入框（render 时只建一次，旧实现切项目后显示的还是上一个项目的秒数）；
+  ③ **一键成片改为 topic 驱动**：去掉「项目没字幕才生成」的跳过逻辑
+  （带字幕的项目——含从下拉切过来的老项目——直接跳过字幕步，用户看不到生成过程），
+  现为「需求框有内容就重新生成字幕（以需求框为准），为空才沿用已有字幕」
+  （沿用记一行 `wb.oneClick.reuseSrt` 日志，不重算不代表没做事）；
+  ④ 「生成字幕」按钮更名**「自动生成字幕」**，`wb.oneClick.hint` 同步改口径
+- **继续优化：字幕排版规范进提示词 + 运行中 UI 闸门**（2026-10-18 Review 驱动）：
+  ① `buildBriefSrtSystem` 增加**排版硬规范 + 两条标准排版样例**（序号/时间轴/正文
+  四行一组、条与条之间空一行）——这是 too-few-cues 报障的根因预防：`parseSrt`
+  块内切分是兜底，提示词先规范排版才是根治；② 一键成片/生成字幕运行中，
+  「生成字幕」按钮同步禁用（`setOneClickRunning` 扩容到三个按钮），停止按钮保持
+  可点；③ 独立「生成字幕」与「一键成片」两个入口共用同一套按钮态切换，行为一致
+- **流水线再调整：「提示词生成字幕」并入第二步「一键成片」卡**（2026-10-18 用户反馈
+  「提示词生成字幕部分挪到一键成片里作为第二步，字幕→字幕表作为第三步；既可以单独
+  生成字幕 srt，也可以一键成片走完后续流程，而不需要手动选择字幕文件」）：
+  ① 步骤重排为五步：① 渲染引擎 ② **一键成片（含需求提示词框 + 艺术/画笔样式行 +
+  目标时长 + 「生成字幕」按钮 + 主按钮/停止按钮 + 执行日志）** ③ 字幕 → 分幕表
+  （只剩字幕正文兜底 + 分幕目标 + 生成分幕表）④ 逐幕制作 ⑤ 合并成片；
+  ② 「生成字幕」可单独点（只出 SRT，不跑后续），「一键成片」则从需求框内容开始
+  一路走到成片（前置生成 SRT → 重算分幕表 → 逐幕补齐 → 配音合并），
+  **两条路径都不需要手动选字幕文件**；「选择字幕文件」降级为第三步的手动兜底；
+  ③ 项目 head 接线（新建/删除/切换）随渲染函数挪位，保持一次接线
+- **「一键成片」拆为独立第三步 + 前置补齐 + 停止按钮**（2026-10-18 用户反馈
+  「第二步叫一键成片，原有的字幕→字幕表就成了第三步，合到一起不合适；
+  一键成片应该包含提示词→srt 的转换；增加停止按钮，目前一键成片错误
+  不会退出/不会停止，无法强行中断」）：
+  ① 步骤重排为五步：① 渲染引擎 ② 字幕 → 分幕表 ③ **一键成片（独立卡片）**
+  ④ 逐幕制作 ⑤ 合并成片——「字幕→分幕表」与「一键成片」不再混在一张卡里；
+  ② 一键成片**前置包含「需求 → SRT → 分幕表」**：没有字幕文本时先用第二步
+  需求框内容调 LLM 生成 SRT（沿用 `runBriefCore`，与独立「生成字幕」按钮
+  同一条链路），没有分幕表时按目标秒数自动重算——点了这一步不必回第二步
+  挨个点；前置阶段只记节点日志，百分比在各幕工作量算清后重新起算
+  （`runLogReset(total, keepLines)`：日志行与启动时间不断档）；
+  ③ 新增**「停止」按钮**：与主按钮同一行，运行中可点，`ctrl.abort()` 经
+  parentSignal 逐级穿透到出图 / 渲染 / TTS / 合并每一环
+- **第二步「需求 → 字幕」生成**（2026-10-18 用户反馈「插入第二步，添加提示词框，根据需求生成字幕文件」）：
+  提示词框输入一句话需求（如「3 分钟讲清楚双链笔记」），LLM 扩写成完整 SRT。
+  系统提示词写死总秒数 / 条数 / 每条 3–8s / 每「分幕目标秒数」一个话题段（治「要 3 分钟给 40 秒」），
+  配 `validateBriefSrt` 四门槛（无 SRT 块 / 条数 <3 / 时间轴非递增 / 总时长不足目标 60%），
+  不过门槛整份丢弃并提示，绝不让半截字幕进分幕；手贴 SRT 的入口保留作兜底
+- **艺术样式下拉**（提示词模板 JSON 化）：每种样式 = 一份 JSON 提示词模板
+  （`styleBlock / canvasBg / inkColor / accents / extraPositive / extraNegative`）喂给 `buildLinePrompt`，
+  内置 4 款（notion-doodle 默认 / warm-storybook / blueprint / ink-wash），
+  引擎目录 `assets/styles/*.json` 外部覆盖（同 id 覆盖、新 id 追加），不改代码即可加样式；
+  **换样式作废该幕线稿**（线稿是提示词的直接产物，派生产物随源失效）
+- **画笔样式下拉**（渲染器 hand 参数 PNG）：默认「人笔笔触素材」；支持「提示词新增」——
+  弹窗写一句需求 → AI 出图 → 存 Vault `{outputFolder}/whiteboard/brushes/<id>.png` + `brushes.json` 登记表，
+  项目 json 只存短 id（可跨机器携带）；下拉带 36px 预览图。
+  出图提示词包三层硬约束：**笔尖在画面最左上**（渲染器把裁剪后蒙版左上角锚在笔尖）、
+  **纯白底**（无 alpha 时按「近白即背景」算蒙版）、**无任何文字**（扩散模型画文字必出乱码假字）。
+  **换画笔只作废渲染以后的产物**（videoPath/finalPath/finalSrtPath）——线稿不依赖画笔，不牵连
+- **执行日志**（一键成片）：启动时间 + 每秒 elapsed 计时 + 百分比（分母 = **实际剩余工作量**，
+  已有素材计入完成，防「跳过 3 步却显示 0%→100%」的假进度）+ 最近 12 行 `[mm:ss]` 节点日志 + 条纹进度条
+- **一键成片**（线稿 → 标注 → 渲染 → 自动配音 → 合并一次跑完，已有素材自动跳过、
+  缺什么补什么的断点续跑；逐幕按钮保留作微调）。**位置两次调整**：先在 2026-10-18
+  早些时候从合并卡挪进第二步卡片，同日用户反馈「合到一起不合适」后**拆为独立
+  第三步卡片**，并前置「需求 → SRT → 分幕表」补齐与「停止」按钮（见本条 Added 首项）
+- **音色下拉**（合并卡内，与解说篇同款）：按 `settings.ttsProvider` 分支——
+  edge 列内置 `TTS_VOICES`；audio8 异步拉服务端已注册音色（拉失败保留占位项不阻断）。
+  音色存进项目 json（`voice`，可跨机器携带）；**换音色即作废旧音轨**（派生产物随源失效）
+- **四段步骤卡片面板**：① 渲染引擎 ② 字幕→分幕 ③ 逐幕制作（线稿 / 标注 / 渲染）④ 合并成片
+- **引擎依赖安装可视化**：进度条 + 百分比 + 阶段文案 + 最近 8 行实时日志 + 每秒「已等待 N 秒」计时；
+  `prepare_env.py` 改为流式回显（不再吞 pip 输出）+ 逐包 `(i/N)` 标记 + 清华镜像
+- **依赖就绪自动禁用安装按钮**：`prepare_env.py --check` 探测通过后按钮置灰并显示「依赖已就绪（无需安装）」，
+  避免已装好的机器每次都白等几分钟
+- **按 SRT 自动配音**（`autoVoice` 默认开）：逐幕 TTS → `atempo` 变速对齐该幕视频时长（夹 0.5–2.0）→ 拼成总音轨，
+  合并时自动跑，无需手挑音频；手动挑 Vault 音频降级为兜底
+- **成片烧硬字幕**：合并后按「Σ幕视频时长」重排 cue 时间轴再烧，产物 `whiteboard-final.srt`
+- **引擎外部化**：新增设置 `whiteboardEngineDir` / `whiteboardHandDirAbs` / `whiteboardPythonPath`；
+  填外部 Python 可直接跳过 `prepare_env` 建 venv。引擎以可移植包独立分发，**不再内置 `resources/`**（已从仓库删除）
+
+### Fixed
+
+- **艺术/画笔样式下拉在一键成片运行中可随意切换**（2026-10-18 Review）：切换即触发
+  `invalidateForArtStyleChange/ForBrushChange` 作废线稿/单幕引用，与正在生产的
+  流水线竞态（渲染完成会回写已被清空的 store，状态混乱）。修为运行中拒绝切换并
+  恢复原选中值 + Notice（新键 `wb.style.locked`）
+- **跨项目串台：切项目后字幕框/需求框不同步**（2026-10-18 Review）：`loadProject`
+  不刷新 `srtInput` 也不清 `briefInputEl`——③ 卡还显示上一个项目的 SRT（用户
+  一编辑就把旧稿写进新项目），② 卡残留的需求会被一键成片前置阶段拿去生成字幕。
+  修为 `loadProject` 同步字幕框 + 清空需求框
+- **「字幕生成失败: too-few-cues」——模型回了完整字幕却只解析出 1 条**（用户 2026-10-18
+  报障，一键成片跑到前置字幕阶段即失败）：根因是 `parseSrt` 块内只取**第一个** `-->` 行，
+  而模型常输出**紧凑 SRT**（cue 之间不留空行、只隔序号行），20 条全被吞进第一条正文 →
+  解析出 1 条 → 撞 `too-few-cues` 门槛。修复三连：
+  ① `parseSrt` 块内按时间行切分（每个时间行开启一条新 cue），并剔除正文尾部连续的
+  纯数字行（下一条的序号被吃进来了）；
+  ② `validateBriefSrt` 条数门槛 3 → 2（2 条也是可用的短视频字幕），且每条失败都带
+  **人话 message**（「只解析出 1 条字幕（至少需要 2 条）：需求可能太短…」）——内部原因码
+  不再直接露给用户；
+  ③ `runBriefCore` 校验失败**自动重试一次**（temperature 0.8→0.9，网络错误不重试），
+  偶发失败拦在第一层
+- **内置画笔名错别字**（用户 2026-10-18 报障「人比笔触素材 → 人笔笔触素材」）：
+  `WB_BRUSH_DEFAULT_NAME` 及 `wb.brush.addHint`、面板注释、CHANGELOG、doc/45 共 8 处
+  「人比」统一改为「人笔」（en-US 用的是 "engine hand asset" 译法，无此字面量）
+- **一键成片失败后仍硬跑完全程**（用户 2026-10-18 反馈「一键成片错误不会退出/不会停止」）：
+  上一轮 Review 为修「百分比失速」把「失败计入已处理并继续」当成了正解——
+  线稿/标注/渲染任一失败都 `continue` 跑后续幕，用户看到的是一条停不下来的
+  错误流水线。现改为**失败即停**：任一步失败立即 break，日志收尾
+  「✗ 已停止：XX 失败」，已生成的素材保留（磁盘不删），修复后重跑断点续传。
+  取消与失败是两个意图：取消走 `ctrl.signal.aborted` → 「已取消」；
+  合并阶段的 TTS 失败仍 fail-soft（降级无声成片，那是「合成失败不阻断」）
+- **新增画笔失败（ENOENT）**（用户 2026-10-18 报障，真机复现：画笔图生成成功、
+  落盘炸 `ENOENT … open '…/.agnes/whiteboard/brushes/brush-custom-qwm.png'`）：
+  `addWhiteboardBrush` 直接 `adapter.writeBinary`，而 Obsidian 的 adapter 是
+  Node fs 直写、**不会自动建父目录**——首次新增画笔时 `whiteboard/brushes/`
+  不存在即炸。修为写入前**逐级 mkdir**（一把递归 mkdir 不兼容老版本 Obsidian）。
+  同因修了测试失守根因：fake adapter 的 `writeBinary` 原来自带
+  `mkdirSync(recursive)`，比真机宽容，导致这个 bug 在 1687 个单测里完全隐形。
+  现 fake 改为严格模拟真机（缺目录就抛 ENOENT），补回归测试并**反向验证**
+  （注掉修复即精确复现用户的 ENOENT）
+- **一键成片「取消」在第一次渲染之后被吞掉**（Review 2026-10-18 抓到，M3 引入）：
+  `renderScene` 内部新建控制器时**覆盖**了 `this.abort`——而 hotCancel 断的正是
+  `this.abort`。覆盖后它指向这个跑完即过期的 inner 控制器，外层循环
+  `ctrl.signal.aborted` 永远是 false，用户点取消后循环继续跑后续幕。
+  修法：嵌套运行（renderScene / ensureVoiceTrack / mergeFinal）收到 parentSignal 时
+  **只挂监听不覆盖** `this.abort`；一键成片把外层控制器传给 mergeFinal，
+  配音 / 合并共享同一个取消信号，TTS 阶段取消则直接中止合并（fail-soft 只管
+  「合成失败不阻断」，「取消」是另一个意图）
+- **一键成片出图步骤不可中止**（同轮）：`generateSceneImage` 调 `generateImage`
+  没传 signal——出图是最慢的一步（10–60s/幕），取消只能等它自己跑完。
+  补 `signal: this.abort?.signal`，断在 postJson / downloadBytes 上干净抛出
+- **执行日志百分比在失败步骤上失速**（同轮）：出图失败 `continue` 跳过本幕余下两步、
+  渲染失败也不推进——这些步骤实际已处理（不会再跑），不计入的话进度条永远到不了 100%，
+  中途比例也失真。现失败 / 跳过均计入已处理
+- **画笔下拉不修复幽灵 id**（同轮）：项目存着的 `brushId` 指向已删除的画笔时，
+  下拉显示内置而 json 留着幽灵 id。现在 `fillBrushes` 命中不了就归一为 builtin 并存档
+- **删除项目只删 json、不删生成物目录**（用户 2026-10-18 报障，真机复现：项目删了，
+  `_Agnes/whiteboard/<id>/` 整棵目录留在盘上成孤儿）：现在 `deleteWhiteboardProject`
+  json + 资产目录一起删。目录删除两段式（`explainProject` 同款）：索引里有 →
+  `fileManager.trashFile`（进回收站、可恢复）；索引里没有（Python 渲染器直写盘）→
+  `adapter.rmdir(rel, true)` 递归删。**不能用 `adapter.remove()` 删目录**——它只能删文件，
+  对目录直接抛（Windows EPERM），这正是「点了删除目录还在」的经典根因。
+  删不掉时不静默：返回 `dirOk:false` + 原因，面板明确提示用户手动删
+- **删除无二次确认**：生成物是花钱产物且部分文件进不了回收站，现在删除走两轮弹窗——
+  第一轮列清会删什么（几张线稿 / 几段单幕 / 有无成片），第二轮「删了不可恢复」再确认一次
+- **早期版本留下的孤儿目录无清理入口**：新增 `listOrphanWhiteboardAssetDirs`（有目录无 json），
+  面板在项目行下方显示警示行 + 「一并清理」按钮（逐个列名确认后删）。真机上
+  「我的世界-20261017-232535」这个孤儿就是这样被认出来的
+- **单幕项目无法合成**（用户 2026-10-18 报障「一个视频无法合成视频，不合理」）：
+  `ffmpeg.concatVideos` 对单输入直接抛 `needTwoVideos`（防其它流水线误传单段），
+  白板却可能只有一幕——短字幕/只做一段。现在 `mergeWhiteboardScenes` 放行单输入：
+  无后期直接拷贝成片，有后期把这一幕当作滤镜链输入（烧字幕/挂音轨照常走），
+  原片不参与中间文件清理。`whiteboard-merge-single` 5 条单测钉住（含多幕回归护栏）
+- **合并/配音误报「ffmpeg 不可用」**：两处只读 `getFfmpegSync()` 缓存，新会话缓存为空即误判。
+  改为 `getFfmpegSync() ?? await detectFfmpeg({ ffmpegPath, ffprobePath })`
+- **安装被超时误杀**：写死 300s 撑不过实测的首装 6 分钟+，提至 15 分钟
+- **配音读旧稿**（真机踩到）：改过字幕重新分幕后，幕的 `text` 只在建幕时写过一次 → 幕 1 仍按最早的旧稿配音。
+  现在分幕重算时**全量同步**元数据，文本变化的幕自动作废产物并置回未完成
+- **改了字幕仍复用旧音轨**：分幕变化现在会一并作废 `audioPath` / `finalPath` / `finalSrtPath`，
+  否则「已有音轨就直接复用」的分支会让旧配音换个马甲复活
+- **部分幕未渲染时合并不提示**：现在会明确告知「只有 done/total 幕已渲染，成片将只包含这些幕」
+- **机器相关的绝对路径险些落进项目 json**：渲染时面板曾把 venv 里的 Python 解释器（`envPy`）临时挂到幕对象上，
+  而 `serializeWhiteboardProject` 只剥 `error`——这条 `…\.venv\Scripts\python.exe` 会被写进 `projects/*.json`。
+  项目 json 是会同步/拷贝的，落到别的机器必然失效、还可能被误当有效值复用。现在 envPy 改为面板级缓存
+  （键 = 引擎目录 + 外部 Python 配置），serialize 再显式剥一次做双保险；`whiteboard-store-serialize` 5 条单测钉住
+- **配音分片采样率不齐导致拼接不可靠**：各幕 TTS 原始采样率随引擎而变（edge-tts 24kHz / Audio8 另一套），
+  `concatAudio` 的 concat demuxer 走 `-c copy` 时要求分片参数一致。现在每幕对齐统一 `-ar 24000 -ac 1`
+
+### Tests
+
+白板专项 9 组（`whiteboard-srt` / `whiteboard-merge-srt` / `whiteboard-merge-single` /
+`whiteboard-install-progress` / `whiteboard-store-serialize` / `whiteboard-store-delete` /
+`whiteboard-styles` / `whiteboard-brushes` / `whiteboard-brief`），
+其中 `buildMergedSrt` 用 6 条单测钉住「幕间间隙压缩」「末尾钳制」两类时间轴错算，
+`whiteboard-store-serialize` 钉住「envPy / status / error 等运行时态绝不入档」，
+`whiteboard-merge-single` 钉住「单幕放行 + 原片不被当中间文件删 + 多幕回归护栏」，
+`whiteboard-store-delete` 7 条钉住「json + 资产目录同删 / 索引内走回收站 / 目录不存在幂等 /
+删除失败不静默 / 孤儿目录列举 / **brushes·styles 共享资源永不判孤儿**」，
+`whiteboard-styles` **18** 条钉住「JSON 卫生（缺字段即丢 / 颜色须 #RRGGBB）/ 外部覆盖合并 /
+默认值回环 / buildLinePrompt 传 style 全生效、不传走原默认规范 / **`diagnoseArtStyleJson`
+原因码逐条 / `serializeArtStyleJson` round-trip / `mergeArtStyles(external, base)` 自定义 base /
+Vault 层「导入 → 列出 → 同 id 覆盖 → 删除」全链路（严格 fake app，`write` 不自动建父目录）**」，
+`whiteboard-brushes` 12 条钉住「登记表卫生 / 增删查全链路 / 幽灵条目过滤 /
+出图提示词三层硬约束 / newBrushId 中文名回退 ASCII slug / **目录不存在时先建再写**
+（真机 ENOENT 回归，已反向验证）」，
+`whiteboard-brief` 钉住「系统/用户提示词构造 / extractSrtBlock 围栏剥离与尾部散文切除 /
+validateBriefSrt 四门槛 / 分钟数钳制」。全套 1688/1688 通过。
+
 ## 0.17.18 — 多国语言（8 种 VIP 增量语言包）（2026-10-17）
 
 ### Added — 日语 / 韩语 / 俄语 / 阿拉伯语 / 印地语 / 西班牙语 / 法语 / 德语

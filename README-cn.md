@@ -4,7 +4,7 @@
 
 在 Obsidian 里一站式生成 **文本 / 图片 / 视频 / 配音 / 小说封面 / 数字人口播**，并合成 **短剧成片**（含红果规范七阶段流水线）。多厂商 API 统一管理，产物直接写进 Vault，支持 Markdown 双链与重启续跑。
 
-- 当前版本：**v0.16.3**（2026-10-12）
+- 当前版本：**v0.17.30**（2026-10-27）
 - 要求 Obsidian **≥ 1.7.2**
 - 桌面端专用（`isDesktopOnly: true`；需 Node/Electron 与 ffmpeg）
 - 发布说明：[`CHANGELOG.md`](./CHANGELOG.md)
@@ -28,6 +28,7 @@
 | **B-roll** | 背景视频五阶段幂等流水线；角色三步（建档 / 定妆 / 定锚）保人物一致；**零模型自动分幕**（ffmpeg 静音检测 + 按字数摊文稿）；抽帧联系表；合成成片（音乐不提速，画面冻结末帧迁就） |
 | **InkOS 写作台** | Vault 原生小说工程：章节 + 资产库 + AI 续写 + 章节→分镜；**送入红果 Pro** 打通「写 → 拍」；跨项目资产复用 |
 | **无限画布** | 节点图编排：文本 / 图片 / 视频三类节点 + 依赖连线 + 并行生成 + 视频首帧反向继承；禁自连 / 重复 / 悬空 / 成环 |
+| **白板渲染动画** | SRT/ASS 字幕 → 分幕 → 逐幕 AI 线稿 + **OpenCV 确定性渲染** → 合并成片（**烧硬字幕 + 按字幕自动 TTS 配音**）；每幕只有一张线稿是 AI 画的，动画本身由代码算出，渲染零 token；引擎走外部目录分发，可填外部 Python 免建 venv |
 
 **共同特性**
 
@@ -61,9 +62,9 @@
 | **InkOS 写作台**（`inkos`） | Vault 原生小说工程：章节、资产库、AI 续写，章节分镜可直接送入红果 Pro |
 | **无限画布**（`canvas`） | 节点图编排：文本 / 图片 / 视频节点、依赖连线、并行生成、首帧继承 |
 | **edge-tts 引擎**（配音面板 → 引擎） | 微软 edge-tts：9 音色 / 6 情感 / 3 语速 / 标点停顿。非 VIP 仍可用**豆包**（需 Key）与 **Audio8**（本机部署，免费），选项为禁用态而非静默失效 |
-| **8 种增量界面语言**（设置 → 界面语言） | 日语、韩语、俄语、阿拉伯语（RTL）、印地语、西班牙语、法语、德语。渐进式翻译包，覆盖核心 UI，未翻译项回退英文。**简体中文与 English 永久免费** |
+| **8 种增量界面语言**（设置 → 界面语言） | 日语、韩语、俄语、阿拉伯语（RTL）、印地语、西班牙语、法语、德语。渐进式翻译包，覆盖核心 UI，未翻译项回退英文。语言包经 GitHub 热更新（多源竞速自动回退）获取，缓存于插件目录 `language/` 下（不占 `data.json`），支持设置内离线 zip 导入 / 导出。**简体中文与 English 永久免费** |
 
-其余面板 —— **文本、图像、视频、短剧、配音、解说、MTV、画廊、日志** —— 以及统一多厂商 API 管理、账号池、ffmpeg 后期，均 **永久免费**。
+其余面板 —— **文本、图像、视频、短剧、配音、解说、MTV、画廊、日志、白板渲染动画** —— 以及统一多厂商 API 管理、账号池、ffmpeg 后期，均 **永久免费**。
 剧本质量工具（剧本体检 / 改写 / 70 集拆分 / 锁定码设计 / 八步分镜 / 首尾帧继承）内置在**免费的文本面板**中。
 
 > **Obsidian 开发者政策合规**：本插件为 *可选付费*。免费档没有任何功能被移除以强制付费 —— VIP 面板均为增量增强。
@@ -86,7 +87,7 @@
 ```
 
 3. 在 Obsidian 设置 → 第三方插件 → 启用 **Free AI Studio**
-4. 点击左侧边栏 ✨ 图标打开工作台
+4. 点击左侧边栏 ? 图标打开工作台
 
 ### 前置依赖
 
@@ -110,14 +111,14 @@
 
 | 厂商 | 文本 | 图片 | 视频 | Base URL |
 |------|:---:|:---:|:---:|----------|
-| Agnes AI | ✅ | ✅ | ✅ | `api.agnes-ai.cn/v1` |
-| DeepSeek | ✅ | ❌ | ❌ | `api.deepseek.com/v1` |
-| OpenAI GPT | ✅ | ❌ | ❌ | `api.openai.com/v1` |
-| 通义千问 | ✅ | ✅ | ✅ | `dashscope.aliyun.com/...` |
-| 豆包 | ✅ | ✅ | ✅ | `ark.cn-beijing.volces.com/api/v3` |
-| MiniMax | ✅ | ✅ | ✅ | `api.minimaxi.com/v1` |
-| SenseNova | ✅ | ✅ | ❌ | `token.sensenova.cn/v1` |
-| Ollama | ✅ | ❌ | ❌ | `localhost:11434/v1` |
+| Agnes AI | ? | ? | ? | `api.agnes-ai.cn/v1` |
+| DeepSeek | ? | ? | ? | `api.deepseek.com/v1` |
+| OpenAI GPT | ? | ? | ? | `api.openai.com/v1` |
+| 通义千问 | ? | ? | ? | `dashscope.aliyun.com/...` |
+| 豆包 | ? | ? | ? | `ark.cn-beijing.volces.com/api/v3` |
+| MiniMax | ? | ? | ? | `api.minimaxi.com/v1` |
+| SenseNova | ? | ? | ? | `token.sensenova.cn/v1` |
+| Ollama | ? | ? | ? | `localhost:11434/v1` |
 
 ### API Key 回退链
 
@@ -164,14 +165,16 @@
 三条主流水线（简化版短剧 / 红果 Pro / 数字人口播）每步都落盘，重启后回到面板会看到「断点续跑」按更新时间倒序列出历史运行。
 
 **Q：怎么更新插件？**
-到 Release 页面下载最新版覆盖 `.obsidian/plugins/agnes-ai-studio/` 下的 4 个文件，重启 Obsidian 即可。**注意**：设置存于 `data.json`，不在 zip 包内，覆盖不会丢配置。
+到 Release 页面下载最新版覆盖 `.obsidian/plugins/free-ai-studio/` 下的 4 个文件，重启 Obsidian 即可。**注意**：设置存于 `data.json`，不在 zip 包内，覆盖不会丢配置。
 
 ---
 
 ## 第三方声明
 
-本插件未内联任何第三方源码。但有一处协议重实现（来源项目是 LGPL 授权），
-以及一处调用未公开的微软端点，这两件事必须写清楚。
+本插件不分发任何第三方模型权重，也不复制任何上游 TTS 推理代码。
+但有一处协议重实现（来源项目是 LGPL 授权）、一个驱动 Apache-2.0
+本地神经引擎的原创 Python sidecar，以及一处调用未公开的微软端点，
+这三件事必须写清楚。
 
 **Edge TTS —— 协议重实现，上游项目为 LGPLv3**
 
@@ -194,6 +197,20 @@
 商业部署请自行评估合规性，或改用 Audio8 本地引擎 / 豆包路线。
 
 完整分析见 [`doc/40-edge-tts-v2-and-compliance.md`](doc/40-edge-tts-v2-and-compliance.md)。
+
+**MOSS-TTS-Nano —— 本地神经引擎，Apache-2.0**
+
+可选的本地神经引擎以 Python sidecar 形式运行
+[OpenMOSS/MOSS-TTS-Nano](https://github.com/OpenMOSS/MOSS-TTS-Nano)
+（**Apache-2.0**，代码与权重同许可）。插件不分发权重、不复制上游代码：
+`scripts/moss/sidecar.py` 是原创的 FastAPI 服务壳，运行时从用户安装的模型目录
+import 上游 ONNX 推理运行时；约 784MB 权重由用户自行从 HuggingFace / ModelScope
+拉取。每段合成 WAV 都内嵌 `LIST/INFO/AIMD` 隐式 AI 来源标识
+（《互联网信息服务深度合成管理规定》§16），设置面板附音色克隆授权提示——
+参考音频须为本人或已书面授权的录音。完整归属与合规声明见
+[`THIRD_PARTY.md`](THIRD_PARTY.md)，移植调研见
+[`doc/66-tts-porting-plan.md`](doc/66-tts-porting-plan.md)，集成实录见
+[`doc/67-moss-integration.md`](doc/67-moss-integration.md)。
 
 ---
 

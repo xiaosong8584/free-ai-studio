@@ -1,9 +1,9 @@
 {
 	"id": "free-ai-studio",
 	"name": "Free AI Studio",
-	"version": "0.17.18",
+	"version": "0.17.30",
 	"minAppVersion": "1.7.2",
-	"description": "在 Vault 中生成图片、视频与配音，一键合成短剧、数字人口播视频与 MTV：多厂商 API 统一管理，edge-tts / Audio8-TTS 本地引擎双路免费配音，ffmpeg 成片，Canvas 封面排版，红果短剧 Pro 七阶段编排与数字人口播四阶段编排，支持断点续跑、逐镜重生与 Markdown 双链。",
+	"description": "Generate images, videos, and voice-overs in your Vault; one-click compose short dramas, digital-human talking videos, and MTVs. Unifies multi-vendor AI APIs, free edge-tts & offline TTS narration, ffmpeg rendering, resumable pipelines. Desktop-only.",
 	"author": "xiaosong8584",
 	"authorUrl": "https://github.com/xiaosong8584",
 	"isDesktopOnly": true

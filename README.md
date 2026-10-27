@@ -4,7 +4,7 @@
 
 Generate **text / images / videos / voiceover / novel covers / talking-head avatars** right inside Obsidian, and compose **short-drama films** (with a seven-stage Red Fruit Pro pipeline). Unified multi-vendor API management, all artifacts written directly into your Vault with Markdown wiki-link support and resume-after-restart.
 
-- Current version: **v0.16.3** (2026-10-12)
+- Current version: **v0.17.30** (2026-10-27)
 - Requires Obsidian **≥ 1.7.2**
 - Desktop only (`isDesktopOnly: true`; requires Node/Electron and ffmpeg)
 - Release notes: [`CHANGELOG.md`](./CHANGELOG.md)
@@ -25,6 +25,7 @@ Generate **text / images / videos / voiceover / novel covers / talking-head avat
 | **Talking Head** | Script → **segmentation** → voiceover → **portrait-to-video** (auto-fallback to Ken Burns) → per-segment clips → subtitles → final render, **four-stage orchestration**; 5 performance styles; per-segment re-run |
 | **Explainer** | Research → narration → storyboard → frame images → voiceover → **Remotion render**; **BGM bed** (C-major + arpeggio) + static QC report; three-stage system prompts are user-overridable |
 | **Log** | **Runtime trace panel**: a full timeline of HTTP requests, ffmpeg subprocesses, and pipeline-stage transitions; module filter, auto-follow-latest, one-click export to a note |
+| **Whiteboard Animation** | SRT/ASS subtitles → scene split → per-scene AI line art + **deterministic OpenCV rendering** → merged film (**burned-in subtitles + auto TTS voice-over derived from the subtitles**). Only one AI image per scene — the animation itself is computed by code, so rendering costs zero tokens. The engine ships as an external directory; point it at a system Python to skip venv setup |
 
 **Cross-cutting features**
 
@@ -57,8 +58,9 @@ This plugin is free to use for its core generation features. The following **adv
 | **B-roll Background Video** (`broll`) | Five-stage idempotent pipeline: material → plan → storyboard → keyframe images → clips, with the three-step character flow (profile / design / anchor) |
 | **InkOS Writing Desk** (`inkos`) | Vault-native novel projects: chapters, assets, AI continuation, chapter → storyboard JSON handoff to Red Fruit Pro |
 | **Infinite Canvas** (`canvas`) | Node-graph orchestration: text / image / video nodes, dependency links, parallel generation, first-frame inheritance |
+| **Whiteboard Animation** (`whiteboard`) | SRT subtitles → per-scene AI line art + OpenCV deterministic rendering (zero token cost). Engine directory / hand-brush assets / external Python interpreter configuration are part of the VIP panel |
 | **edge-tts engine** (Voiceover → engine) | Microsoft edge-tts: 9 voices / 6 emotions / 3 speeds / punctuation pauses. Non-VIP users still get **Doubao** (API key) and **Audio8** (self-hosted, free), and the option is disabled (not silently broken) |
-| **8 extra UI languages** (Settings → Language) | Japanese, Korean, Russian, Arabic (RTL), Hindi, Spanish, French, German. Incremental translation packs covering the core UI; untranslated strings fall back to English. **Simplified Chinese and English stay free forever** |
+| **8 extra UI languages** (Settings → Language) | Japanese, Korean, Russian, Arabic (RTL), Hindi, Spanish, French, German. Incremental translation packs covering the core UI; untranslated strings fall back to English. Packs update over the air from GitHub (multi-source racing with automatic fallback), cached under the plugin's `language/` directory (never inside `data.json`); offline install/export via `language*.zip` in Settings. **Simplified Chinese and English stay free forever** |
 
 All other panels — **Text, Image, Video, Drama, Voiceover, Explainer, MTV, Gallery, Log** — plus unified multi-vendor API management, account pools, and ffmpeg post-production — remain **free forever**. Script-quality tooling (script check / rewrite / 70-episode split / lock-code design / 8-step storyboard / first-last frame inheritance) ships inside the free **Text** panel.
 
@@ -161,7 +163,7 @@ Three causes: ① Microsoft service outage (auto-detected, fails fast with a cle
 All three flagship pipelines (short-drama, Red Fruit Pro, Talking-Head) flush every step to disk. After a restart, the panel shows a "Resume from breakpoint" section listing past runs, newest first.
 
 **Q: How do I update the plugin?**
-Download the latest release and overwrite the four files under `.obsidian/plugins/agnes-ai-studio/`, then restart Obsidian. **Note**: settings live in `data.json`, which is not part of the zip — overwriting never loses your configuration.
+Download the latest release and overwrite the four files under `.obsidian/plugins/free-ai-studio/`, then restart Obsidian. **Note**: settings live in `data.json`, which is not part of the zip — overwriting never loses your configuration.
 
 ---
 

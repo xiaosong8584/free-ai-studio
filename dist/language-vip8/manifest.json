@@ -1,39 +1,39 @@
 {
-  "version": "0.17.30",
-  "build": 1793117875,
-  "updatedAt": "2026-10-27T16:17:55.569Z",
+  "version": "0.18.0",
+  "build": 1793679838,
+  "updatedAt": "2026-11-03T04:23:58.792Z",
   "packs": {
     "ja-JP": {
-      "hash": "a91c1673a88708a2d08df336ccfa215ff5177121d29b51ca3d2da5ea39b51643",
-      "bytes": 14147
+      "hash": "faf2ffcdac27f5cc092e5ca0da92c06b1198ff62f3d93361adf1d9bba18f8d46",
+      "bytes": 26124
     },
     "ko-KR": {
-      "hash": "225fac35b3f9de95cc91c021855d93303a1c2e1b2c0d68a71816b372ac371ddc",
-      "bytes": 12900
+      "hash": "ad0857a6934ab9939a83a2cb8058f303c76dae38aa607acc3bc43b56185a07a6",
+      "bytes": 24180
     },
     "ru-RU": {
-      "hash": "4c655201199d5c5cb2eb80ce2ffba28f477595866806338e1e32e99ae2232ce6",
-      "bytes": 16806
+      "hash": "323f3cce54b6177442cf0e417d8d19728380001fb026b9f65a01a80dc2c4e6e5",
+      "bytes": 31352
     },
     "ar-SA": {
-      "hash": "84d9f8352427897463d185b299f75752e091012181dfceff49545bf36306b8a0",
-      "bytes": 15377
+      "hash": "e07d1da2ef8f5578b2fed600c9c6b956263e6098e163d46fc22fffbd1f4c3632",
+      "bytes": 28364
     },
     "hi-IN": {
-      "hash": "eb38500cba8827c107cc37343ca4ac65f757e0f509354e65f814da05679c3d1e",
-      "bytes": 20491
+      "hash": "85b1dfa4a34a0fc99a932f2026186614d44fe5f48a7e038670eb4147380dbb48",
+      "bytes": 37919
     },
     "es-ES": {
-      "hash": "be1c88c7c06b2509fcc0adfde3ce79aeb7cfdf25e4527e8b4c86efd47bd6e09c",
-      "bytes": 12668
+      "hash": "78a36d26cf9330b060eb3d0d1fae54fb4e8bfbb006ae4e1246efc02e582be29c",
+      "bytes": 23377
     },
     "fr-FR": {
-      "hash": "f87b1b3f04b943dbe9631e075a643ff5343024cda233483a744ad688f6455b09",
-      "bytes": 12836
+      "hash": "c47b55ec7a4bf227f46a52cf70dbaca56f61066fa4729220507bd1daf3c85921",
+      "bytes": 23897
     },
     "de-DE": {
-      "hash": "a5ad9e5fe1ea4731ad583c9b03fbfe9010635d46ec5f3937c3df7de4609bae88",
-      "bytes": 12698
+      "hash": "b259a8be7793755785f867da91d8029624b5675f8c5d022b7cd02816faf8f8d2",
+      "bytes": 23402
     }
   }
 }

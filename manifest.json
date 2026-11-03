@@ -1,7 +1,7 @@
 {
 	"id": "free-ai-studio",
 	"name": "Free AI Studio",
-	"version": "0.17.30",
+	"version": "0.18.0",
 	"minAppVersion": "1.7.2",
 	"description": "Generate images, videos, and voice-overs in your Vault; one-click compose short dramas, digital-human talking videos, and MTVs. Unifies multi-vendor AI APIs, free edge-tts & offline TTS narration, ffmpeg rendering, resumable pipelines. Desktop-only.",
 	"author": "xiaosong8584",
